@@ -740,6 +740,13 @@ textarea.form-input { resize: vertical; min-height: 60px; }
    WEALTHVIEW — Single-File Application
    ============================================================ */
 
+// ============ CONFIG ============
+const WORKER_URL = 'https://wealthview-api.mka-831.workers.dev';
+const SUPABASE_URL = 'https://foophemjhkomzzzpffuq.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvb3BoZW1qaGtvbXp6enBmZnVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MjA0MTYsImV4cCI6MjA4OTQ5NjQxNn0.8ABNM30VYeq46QYa3UYlbGW_TcJCm90ofFyhUr1cJYg';
+const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvb3BoZW1qaGtvbXp6enBmZnVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzkyMDQxNiwiZXhwIjoyMDg5NDk2NDE2fQ.eTfnuSnpfa3Om1zY-fj05i0wbdoCS5YUsCnAmI6hx_8';
+const USER_ID = '3fffb10d-060f-4913-bf5a-279bfa1cc087';
+
 // ============ DATA STORE ============
 const STORAGE_KEYS = {
   assets: 'wv_assets',
@@ -752,11 +759,79 @@ const STORAGE_KEYS = {
   accounts: 'wv_accounts',
 };
 
+// Supabase table mapping (for cloud sync when tables exist)
+const SUPABASE_TABLES = {
+  wv_assets: 'wv_assets',
+  wv_liabilities: 'wv_liabilities',
+  wv_transactions: 'wv_transactions',
+  wv_companies: 'wv_companies',
+  wv_snapshots: 'wv_snapshots',
+  wv_watchlist: 'wv_watchlist',
+};
+
+let supabaseReady = false;
+
+// Check if Supabase tables exist
+async function checkSupabase() {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/wv_assets?select=id&limit=1`, {
+      headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` }
+    });
+    supabaseReady = res.ok;
+    if (supabaseReady) console.log('☁️ Supabase cloud-sync aktiveret');
+    else console.log('📱 Kører med localStorage (Supabase tabeller ikke oprettet endnu)');
+  } catch { supabaseReady = false; }
+}
+
 function loadData(key) {
   try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; }
 }
+
 function saveData(key, data) {
   localStorage.setItem(key, JSON.stringify(data));
+  // Background sync to Supabase if available
+  if (supabaseReady && SUPABASE_TABLES[key]) {
+    syncToSupabase(key, data).catch(e => console.warn('Supabase sync fejl:', e));
+  }
+}
+
+// Supabase cloud-sync (upsert all items)
+async function syncToSupabase(key, data) {
+  const table = SUPABASE_TABLES[key];
+  if (!table || !data.length) return;
+  
+  // Transform data for Supabase (wrap in jsonb data column or use flat columns)
+  // For simplicity, we upsert items individually with their full data
+  for (const item of data) {
+    const row = { ...item, user_id: USER_ID };
+    // Remove fields not in DB
+    delete row.editing;
+    
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_SERVICE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify(row)
+      });
+    } catch (e) { /* silently fail — localStorage is primary */ }
+  }
+}
+
+async function loadFromSupabase(key) {
+  const table = SUPABASE_TABLES[key];
+  if (!table || !supabaseReady) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?user_id=eq.${USER_ID}&order=created_at.desc`, {
+      headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` }
+    });
+    if (res.ok) return await res.json();
+  } catch (e) { /* fall back to localStorage */ }
+  return null;
 }
 function genId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
@@ -1794,48 +1869,79 @@ async function fetchAllQuotes() {
   btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Henter...';
 
   const watchlist = loadData(STORAGE_KEYS.watchlist);
-  const corsProxies = [
-    'https://corsproxy.io/?',
-    'https://api.allorigins.win/raw?url=',
-  ];
+  if (watchlist.length === 0) {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Opdater Kurser';
+    return;
+  }
 
-  for (const item of watchlist) {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(item.ticker)}?interval=1d&range=1d`;
-    let fetched = false;
-
-    // Try direct fetch first
-    try {
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        updateWatchlistFromYahoo(item, data);
-        fetched = true;
-      }
-    } catch (e) { /* CORS blocked — try proxies */ }
-
-    if (!fetched) {
-      for (const proxy of corsProxies) {
-        try {
-          const res = await fetch(proxy + encodeURIComponent(url));
-          if (res.ok) {
-            const data = await res.json();
-            updateWatchlistFromYahoo(item, data);
-            fetched = true;
-            break;
+  // Use our Cloudflare Worker proxy for reliable CORS-free Yahoo Finance access
+  const tickers = watchlist.map(w => w.ticker).join(',');
+  try {
+    const res = await fetch(`${WORKER_URL}/proxy/yahoo/portfolio?symbols=${encodeURIComponent(tickers)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.quotes) {
+        for (const quote of data.quotes) {
+          const item = watchlist.find(w => w.ticker === quote.symbol);
+          if (item && !quote.error) {
+            item.price = quote.regularMarketPrice;
+            item.currency = quote.currency || 'USD';
+            item.change = quote.changePct;
+            item.name = item.name || quote.name;
+            item.lastUpdated = new Date().toISOString();
           }
-        } catch (e) { /* try next proxy */ }
+        }
       }
     }
-
-    if (!fetched) {
-      item.lastUpdated = new Date().toISOString();
+  } catch (e) {
+    console.warn('Worker proxy fejl, prøver direkte:', e);
+    // Fallback: try direct Yahoo Finance per ticker
+    for (const item of watchlist) {
+      try {
+        const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(item.ticker)}?interval=1d&range=1d`);
+        if (r.ok) updateWatchlistFromYahoo(item, await r.json());
+      } catch { /* CORS blocked */ }
     }
   }
 
   saveData(STORAGE_KEYS.watchlist, watchlist);
   renderWatchlist();
+
+  // Also update any assets with tickers
+  await updateAssetPrices();
+
   btn.disabled = false;
   btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Opdater Kurser';
+}
+
+// Update asset prices from Yahoo Finance (for aktier/ETF and crypto with tickers)
+async function updateAssetPrices() {
+  const assets = loadData(STORAGE_KEYS.assets);
+  const tickered = assets.filter(a => a.ticker && (a.type === 'aktie_etf' || a.type === 'crypto'));
+  if (tickered.length === 0) return;
+
+  const tickers = tickered.map(a => a.ticker).join(',');
+  try {
+    const res = await fetch(`${WORKER_URL}/proxy/yahoo/portfolio?symbols=${encodeURIComponent(tickers)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.quotes) {
+        for (const quote of data.quotes) {
+          const asset = tickered.find(a => a.ticker === quote.symbol);
+          if (asset && !quote.error) {
+            asset.value = (quote.regularMarketPrice * (asset.quantity || 1));
+            asset.livePrice = quote.regularMarketPrice;
+            asset.liveCurrency = quote.currency;
+            asset.lastPriceUpdate = new Date().toISOString();
+          }
+        }
+        saveData(STORAGE_KEYS.assets, assets);
+      }
+    }
+  } catch (e) {
+    console.warn('Aktie-prisopdatering fejlede:', e);
+  }
 }
 
 function updateWatchlistFromYahoo(item, data) {
@@ -1868,6 +1974,7 @@ function esc(str) {
 
 // ============ INIT ============
 function init() {
+  checkSupabase(); // Background check — non-blocking
   initAccountSelect();
   handleRoute();
 }
