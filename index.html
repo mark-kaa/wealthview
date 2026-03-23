@@ -16,8 +16,8 @@
 <meta property="og:see_also" content="https://www.perplexity.ai/computer">
 <link rel="author" href="https://www.perplexity.ai/computer">
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WealthView — Overblik over din økonomi</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>WealthHealth — Overblik over din økonomi</title>
 <link href="https://api.fontshare.com/v2/css?f[]=general-sans@200,300,400,500,600,700&f[]=jetbrains-mono@400,500,700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -46,13 +46,15 @@
   --radius: 8px;
   --radius-sm: 6px;
 }
-html { font-size: 14px; }
+html { font-size: 14px; height: -webkit-fill-available; }
 body {
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
   min-height: 100vh;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -63,7 +65,7 @@ button { font-family: var(--font); cursor: pointer; }
 input, select, textarea { font-family: var(--font); }
 
 /* ============ LAYOUT ============ */
-.app-layout { display: flex; min-height: 100vh; }
+.app-layout { display: flex; min-height: 100vh; min-height: 100dvh; }
 .sidebar {
   width: var(--sidebar-w);
   background: var(--sidebar-bg);
@@ -74,13 +76,20 @@ input, select, textarea { font-family: var(--font); }
   border-right: 1px solid var(--border);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
 }
 .main-content {
   margin-left: var(--sidebar-w);
   flex: 1;
   padding: 24px;
+  padding-top: calc(24px + env(safe-area-inset-top, 0px));
+  padding-right: calc(24px + env(safe-area-inset-right, 0px));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   max-width: calc(1200px + 48px);
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* ============ SIDEBAR ============ */
@@ -290,9 +299,9 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 @media (max-width: 768px) {
   .sidebar { width: 60px; }
   .sidebar .nav-item span, .sidebar-logo span, .sidebar-footer { display: none; }
-  .sidebar-logo { justify-content: center; padding: 16px 8px; }
+  .sidebar-logo { justify-content: center; padding: calc(16px + env(safe-area-inset-top, 0px)) 8px 16px; }
   .sidebar .nav-item { justify-content: center; padding: 10px; }
-  .main-content { margin-left: 60px; padding: 16px; }
+  .main-content { margin-left: 60px; padding: 16px; padding-top: calc(16px + env(safe-area-inset-top, 0px)); }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .chart-grid { grid-template-columns: 1fr; }
   .entity-grid { grid-template-columns: 1fr; }
@@ -364,7 +373,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
         <polyline points="5,20 10,14 15,17 19,9 23,12" stroke="hsl(175,60%,38%)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         <circle cx="23" cy="12" r="2" fill="hsl(175,60%,38%)"/>
       </svg>
-      <span>WealthView</span>
+      <span>WealthHealth</span>
     </div>
     <nav class="sidebar-nav" id="sidebarNav">
       <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
@@ -939,6 +948,8 @@ function handleRoute() {
   document.querySelectorAll('.nav-item').forEach(n => {
     n.classList.toggle('active', n.dataset.page === hash);
   });
+  // Scroll til toppen ved navigation (iPad Safari fix)
+  window.scrollTo(0, 0);
   renderCurrentPage();
 }
 
