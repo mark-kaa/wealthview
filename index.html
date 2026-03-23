@@ -794,9 +794,8 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 
 // ============ CONFIG ============
 const WORKER_URL = 'https://wealthview-api.mka-831.workers.dev';
-const SUPABASE_URL = 'https://btzuzntnxlkteuptmzfo.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ0enV6bnRueGxrdGV1cHRtemZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyOTc4NzksImV4cCI6MjA4OTg3Mzg3OX0.K8svxI6ufGWh2vJTjE1vC9ykI-0HxxXfJMyfaGDjqk0';
-const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ0enV6bnRueGxrdGV1cHRtemZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDI5Nzg3OSwiZXhwIjoyMDg5ODczODc5fQ.OnQ__9s0SLDLEZ8J03nnzNC7GXMHsjE0IQjUqJ6i330';
+// Supabase tilgås via Worker-proxy (service key er server-side)
+// INGEN secrets i frontend-koden
 const USER_ID = '3fffb10d-060f-4913-bf5a-279bfa1cc087';
 
 // ============ DATA STORE ============
@@ -823,13 +822,12 @@ const SUPABASE_TABLES = {
 
 let supabaseReady = false;
 
-// Check if Supabase tables exist
+// Check if Supabase tables exist (via Worker proxy — no secrets in frontend)
 async function checkSupabase() {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/wv_assets?select=id&limit=1`, {
-      headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` }
-    });
-    supabaseReady = res.ok;
+    const res = await fetch(`${WORKER_URL}/proxy/supabase/check`);
+    const data = await res.json();
+    supabaseReady = data.ready === true;
     if (supabaseReady) console.log('☁️ Supabase cloud-sync aktiveret');
     else console.log('📱 Kører med localStorage (Supabase tabeller ikke oprettet endnu)');
   } catch { supabaseReady = false; }
@@ -847,41 +845,35 @@ function saveData(key, data) {
   }
 }
 
-// Supabase cloud-sync (upsert all items)
+// Supabase cloud-sync via Worker proxy (no secrets in frontend)
 async function syncToSupabase(key, data) {
   const table = SUPABASE_TABLES[key];
   if (!table || !data.length) return;
   
-  // Transform data for Supabase (wrap in jsonb data column or use flat columns)
-  // For simplicity, we upsert items individually with their full data
-  for (const item of data) {
-    const row = { ...item, user_id: USER_ID };
-    // Remove fields not in DB
+  const rows = data.map(item => {
+    const row = { ...item };
     delete row.editing;
-    
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-        method: 'POST',
-        headers: {
-          'apikey': SUPABASE_SERVICE_KEY,
-          'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates'
-        },
-        body: JSON.stringify(row)
-      });
-    } catch (e) { /* silently fail — localStorage is primary */ }
-  }
+    return row;
+  });
+  
+  try {
+    await fetch(`${WORKER_URL}/proxy/supabase/upsert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table, rows })
+    });
+  } catch (e) { /* silently fail — localStorage is primary */ }
 }
 
 async function loadFromSupabase(key) {
   const table = SUPABASE_TABLES[key];
   if (!table || !supabaseReady) return null;
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?user_id=eq.${USER_ID}&order=created_at.desc`, {
-      headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` }
-    });
-    if (res.ok) return await res.json();
+    const res = await fetch(`${WORKER_URL}/proxy/supabase/select?table=${table}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) return data;
+    }
   } catch (e) { /* fall back to localStorage */ }
   return null;
 }
