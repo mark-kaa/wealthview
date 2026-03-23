@@ -314,6 +314,44 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 .gap-8 { gap: 8px; }
 .text-mono { font-family: var(--mono); }
 .tabnum { font-variant-numeric: tabular-nums; }
+
+/* ============ CVR LOOKUP ============ */
+.cvr-status {
+  margin-top: 6px; padding: 8px 12px; border-radius: var(--radius-sm);
+  font-size: 12px; display: none; align-items: center; gap: 8px;
+}
+.cvr-status.loading { display: flex; background: var(--primary-subtle); color: var(--primary); }
+.cvr-status.success { display: flex; background: hsla(152,60%,38%,0.1); color: var(--success); }
+.cvr-status.error { display: flex; background: hsla(0,72%,51%,0.1); color: var(--danger); }
+.cvr-status .spin { animation: spin 1s linear infinite; }
+.cvr-preview {
+  margin-top: 12px; padding: 12px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 12px;
+}
+.cvr-preview .cvr-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid hsla(220,15%,20%,0.3); }
+.cvr-preview .cvr-row:last-child { border-bottom: none; }
+.cvr-preview .cvr-label { color: var(--text-muted); }
+.cvr-preview .cvr-value { color: var(--text); font-weight: 500; text-align: right; max-width: 60%; }
+
+/* ============ RICH COMPANY CARDS ============ */
+.company-status { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; }
+.company-status.aktiv { color: var(--success); }
+.company-status.ophoert { color: var(--danger); }
+.company-status.konkurs { color: var(--danger); }
+.company-status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.company-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.company-detail-item { font-size: 12px; }
+.company-detail-item .label { color: var(--text-faint); font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; }
+.company-detail-item .value { color: var(--text); margin-top: 2px; }
+.company-owners { margin-top: 10px; }
+.company-owners .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--text-faint); margin-bottom: 4px; }
+.company-owner-item { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 0; }
+.company-owner-item svg { width: 14px; height: 14px; color: var(--text-muted); flex-shrink: 0; }
+.company-prod-units { margin-top: 10px; }
+.company-prod-units .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--text-faint); margin-bottom: 4px; }
+.company-pu-item { font-size: 12px; padding: 6px 8px; background: var(--bg); border-radius: var(--radius-sm); margin-bottom: 4px; }
+.company-pu-item .pu-name { font-weight: 500; }
+.company-pu-item .pu-meta { color: var(--text-muted); font-size: 11px; }
 </style>
 </head>
 <body>
@@ -670,19 +708,24 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 
 <!-- Company Modal -->
 <div class="modal-overlay" id="companyModal">
-  <div class="modal">
+  <div class="modal" style="max-width:520px">
     <div class="modal-header">
       <h3 id="companyModalTitle">Tilføj Selskab</h3>
       <button class="btn-icon" onclick="closeModal('companyModal')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <label class="form-label">Selskabsnavn</label>
-        <input type="text" class="form-input" id="companyName" placeholder="f.eks. Sinius Invest ApS">
-      </div>
-      <div class="form-group">
         <label class="form-label">CVR-nummer</label>
-        <input type="text" class="form-input" id="companyCvr" placeholder="12345678">
+        <input type="text" class="form-input" id="companyCvr" placeholder="f.eks. 30081773" oninput="onCvrInput(this.value)">
+        <div class="cvr-status" id="cvrStatus">
+          <svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          <span id="cvrStatusText">Henter CVR-data...</span>
+        </div>
+      </div>
+      <div id="cvrPreviewWrap"></div>
+      <div class="form-group">
+        <label class="form-label">Selskabsnavn</label>
+        <input type="text" class="form-input" id="companyName" placeholder="Udfyldes automatisk fra CVR">
       </div>
       <div class="form-group">
         <label class="form-label">Ejerskab (%)</label>
@@ -692,7 +735,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('companyModal')">Annuller</button>
-      <button class="btn btn-primary" onclick="saveCompany()">Gem</button>
+      <button class="btn btn-primary" id="btnSaveCompany" onclick="saveCompany()">Gem</button>
     </div>
   </div>
 </div>
@@ -1592,6 +1635,73 @@ function deleteLiability(id) {
   });
 }
 
+// ============ CVR AUTO-LOOKUP ============
+let cvrLookupTimer = null;
+let currentCvrData = null;
+
+function onCvrInput(value) {
+  const clean = value.replace(/[^0-9]/g, '');
+  if (cvrLookupTimer) clearTimeout(cvrLookupTimer);
+  currentCvrData = null;
+  const statusEl = document.getElementById('cvrStatus');
+  const previewWrap = document.getElementById('cvrPreviewWrap');
+  
+  if (clean.length < 8) {
+    statusEl.className = 'cvr-status';
+    previewWrap.innerHTML = '';
+    return;
+  }
+  
+  // Debounce 500ms
+  cvrLookupTimer = setTimeout(() => lookupCvr(clean), 500);
+}
+
+async function lookupCvr(cvr) {
+  const statusEl = document.getElementById('cvrStatus');
+  const statusText = document.getElementById('cvrStatusText');
+  const previewWrap = document.getElementById('cvrPreviewWrap');
+  
+  statusEl.className = 'cvr-status loading';
+  statusText.textContent = 'Henter CVR-data...';
+  previewWrap.innerHTML = '';
+  
+  try {
+    const res = await fetch(`${WORKER_URL}/proxy/cvr/lookup?cvr=${encodeURIComponent(cvr)}`);
+    if (!res.ok) throw new Error('API fejl');
+    const data = await res.json();
+    
+    if (data.error) {
+      statusEl.className = 'cvr-status error';
+      statusText.textContent = 'CVR ikke fundet';
+      return;
+    }
+    
+    currentCvrData = data;
+    statusEl.className = 'cvr-status success';
+    statusText.textContent = `Fundet: ${data.name}`;
+    
+    // Auto-fill name
+    document.getElementById('companyName').value = data.name || '';
+    
+    // Show preview
+    previewWrap.innerHTML = `<div class="cvr-preview">
+      <div class="cvr-row"><span class="cvr-label">Type</span><span class="cvr-value">${esc(data.type || '—')}</span></div>
+      <div class="cvr-row"><span class="cvr-label">Branche</span><span class="cvr-value">${esc(data.industry || '—')}</span></div>
+      <div class="cvr-row"><span class="cvr-label">Adresse</span><span class="cvr-value">${esc(data.address || '—')}</span></div>
+      <div class="cvr-row"><span class="cvr-label">Status</span><span class="cvr-value">${esc(data.status || '—')}</span></div>
+      <div class="cvr-row"><span class="cvr-label">Stiftet</span><span class="cvr-value">${esc(data.startDate || '—')}</span></div>
+      <div class="cvr-row"><span class="cvr-label">Ejere</span><span class="cvr-value">${data.owners && data.owners.length > 0 ? data.owners.map(o => esc(o)).join(', ') : '—'}</span></div>
+      ${data.phone ? `<div class="cvr-row"><span class="cvr-label">Telefon</span><span class="cvr-value">${esc(data.phone)}</span></div>` : ''}
+      ${data.email ? `<div class="cvr-row"><span class="cvr-label">Email</span><span class="cvr-value">${esc(data.email)}</span></div>` : ''}
+    </div>`;
+    
+  } catch (e) {
+    statusEl.className = 'cvr-status error';
+    statusText.textContent = 'Kunne ikke hente CVR-data';
+    console.warn('CVR lookup fejl:', e);
+  }
+}
+
 // ============ COMPANIES ============
 let expandedCompany = null;
 
@@ -1613,21 +1723,54 @@ function renderCompanies() {
     const isExpanded = expandedCompany === c.id;
     const compFin = financials.filter(f => f.companyId === c.id).sort((a, b) => a.year - b.year);
     const finChartId = 'finChart_' + c.id;
+    const statusClass = (c.status || '').toLowerCase().replace(/ø/g, 'o');
+    const hasCvrData = !!(c.industry || c.address || c.companyType);
 
     return `<div class="entity-card" style="cursor:pointer" onclick="toggleCompany('${c.id}')">
       <div class="entity-card-header">
-        <div>
-          <div class="entity-card-title">${esc(c.name)}</div>
-          ${c.cvr ? `<div class="entity-card-meta">CVR: ${esc(c.cvr)}</div>` : ''}
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <div class="entity-card-title">${esc(c.name)}</div>
+            ${c.status ? `<span class="company-status ${statusClass}"><span class="company-status-dot"></span>${esc(c.status)}</span>` : ''}
+          </div>
+          ${c.cvr ? `<div class="entity-card-meta" style="font-family:var(--mono)">CVR: ${esc(c.cvr)}</div>` : ''}
           <div class="entity-card-meta">Ejerskab: ${fmtPercent(c.ownership)}</div>
+          ${c.companyType ? `<div class="entity-card-meta">${esc(c.companyType)}</div>` : ''}
         </div>
         <div class="entity-actions" onclick="event.stopPropagation()">
+          ${c.cvr ? `<button class="btn-icon" title="Opdater CVR-data" onclick="refreshCvrData('${c.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>` : ''}
           <button class="btn-icon" onclick="editCompany('${c.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button class="btn-icon" onclick="deleteCompany('${c.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
         </div>
       </div>
+      
+      ${hasCvrData ? `<div class="company-detail-grid">
+        ${c.industry ? `<div class="company-detail-item"><div class="label">Branche</div><div class="value">${esc(c.industry)}</div></div>` : ''}
+        ${c.address ? `<div class="company-detail-item"><div class="label">Adresse</div><div class="value">${esc(c.address)}</div></div>` : ''}
+        ${c.startDate ? `<div class="company-detail-item"><div class="label">Stiftet</div><div class="value">${esc(c.startDate)}</div></div>` : ''}
+        ${c.employees != null ? `<div class="company-detail-item"><div class="label">Ansatte</div><div class="value">${c.employees || 'Ikke oplyst'}</div></div>` : ''}
+        ${c.phone ? `<div class="company-detail-item"><div class="label">Telefon</div><div class="value">${esc(c.phone)}</div></div>` : ''}
+        ${c.email ? `<div class="company-detail-item"><div class="label">Email</div><div class="value">${esc(c.email)}</div></div>` : ''}
+      </div>` : ''}
+      
+      ${c.owners && c.owners.length > 0 ? `<div class="company-owners">
+        <div class="label">Ejere</div>
+        ${c.owners.map(o => `<div class="company-owner-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          ${esc(o)}
+        </div>`).join('')}
+      </div>` : ''}
+
       <div class="company-expand ${isExpanded ? 'open' : ''}" onclick="event.stopPropagation()">
-        <div style="margin-bottom:12px">
+        ${c.productionUnits && c.productionUnits.length > 0 ? `<div class="company-prod-units">
+          <div class="label">Produktionsenheder</div>
+          ${c.productionUnits.map(pu => `<div class="company-pu-item">
+            <div class="pu-name">${esc(pu.name)}</div>
+            <div class="pu-meta">${esc(pu.address || '')}${pu.industry ? ' · ' + esc(pu.industry) : ''}</div>
+          </div>`).join('')}
+        </div>` : ''}
+        
+        <div style="margin-top:12px;margin-bottom:12px">
           <button class="btn btn-secondary btn-sm" onclick="openCompanyFinUpload('${c.id}')">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             Upload Regnskab (CSV)
@@ -1648,6 +1791,8 @@ function renderCompanies() {
             </table>
           </div>
         ` : '<p style="font-size:12px;color:var(--text-muted)">Ingen regnskabsdata — upload en CSV</p>'}
+        
+        ${c.cvrUpdated ? `<div style="margin-top:12px;font-size:11px;color:var(--text-faint)">CVR-data opdateret: ${fmtDate(c.cvrUpdated)}</div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -1669,6 +1814,10 @@ function toggleCompany(id) {
 function openCompanyModal(editId) {
   document.getElementById('companyModalTitle').textContent = editId ? 'Rediger Selskab' : 'Tilføj Selskab';
   document.getElementById('companyEditId').value = editId || '';
+  document.getElementById('cvrPreviewWrap').innerHTML = '';
+  document.getElementById('cvrStatus').className = 'cvr-status';
+  currentCvrData = null;
+  
   if (editId) {
     const companies = loadData(STORAGE_KEYS.companies);
     const c = companies.find(x => x.id === editId);
@@ -1691,19 +1840,74 @@ function saveCompany() {
   const obj = {
     id: editId || genId(),
     name: document.getElementById('companyName').value.trim(),
-    cvr: document.getElementById('companyCvr').value.trim(),
+    cvr: document.getElementById('companyCvr').value.trim().replace(/[^0-9]/g, ''),
     ownership: parseFloat(document.getElementById('companyOwnership').value) || 0,
   };
   if (!obj.name) return;
+  
+  // Merge CVR data if available
+  if (currentCvrData) {
+    obj.companyType = currentCvrData.type || '';
+    obj.industry = currentCvrData.industry || '';
+    obj.address = currentCvrData.address || '';
+    obj.status = currentCvrData.status || 'Aktiv';
+    obj.startDate = currentCvrData.startDate || '';
+    obj.employees = currentCvrData.employees;
+    obj.phone = currentCvrData.phone || '';
+    obj.email = currentCvrData.email || '';
+    obj.owners = currentCvrData.owners || [];
+    obj.productionUnits = currentCvrData.productionUnits || [];
+    obj.cvrRaw = currentCvrData.raw || {};
+    obj.cvrUpdated = new Date().toISOString();
+  }
+  
   if (editId) {
     const idx = companies.findIndex(c => c.id === editId);
-    if (idx >= 0) companies[idx] = obj;
+    if (idx >= 0) {
+      // Preserve existing data not in form
+      const existing = companies[idx];
+      companies[idx] = { ...existing, ...obj };
+    }
   } else {
     companies.push(obj);
   }
   saveData(STORAGE_KEYS.companies, companies);
   closeModal('companyModal');
+  currentCvrData = null;
   renderCompanies();
+}
+
+async function refreshCvrData(companyId) {
+  event.stopPropagation();
+  const companies = loadData(STORAGE_KEYS.companies);
+  const c = companies.find(x => x.id === companyId);
+  if (!c || !c.cvr) return;
+  
+  try {
+    const res = await fetch(`${WORKER_URL}/proxy/cvr/lookup?cvr=${encodeURIComponent(c.cvr)}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.error) return;
+    
+    c.name = data.name || c.name;
+    c.companyType = data.type || '';
+    c.industry = data.industry || '';
+    c.address = data.address || '';
+    c.status = data.status || 'Aktiv';
+    c.startDate = data.startDate || '';
+    c.employees = data.employees;
+    c.phone = data.phone || '';
+    c.email = data.email || '';
+    c.owners = data.owners || [];
+    c.productionUnits = data.productionUnits || [];
+    c.cvrRaw = data.raw || {};
+    c.cvrUpdated = new Date().toISOString();
+    
+    saveData(STORAGE_KEYS.companies, companies);
+    renderCompanies();
+  } catch (e) {
+    console.warn('CVR refresh fejl:', e);
+  }
 }
 
 function deleteCompany(id) {
