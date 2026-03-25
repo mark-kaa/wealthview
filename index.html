@@ -24,6 +24,7 @@
 <link href="https://api.fontshare.com/v2/css?f[]=general-sans@200,300,400,500,600,700&f[]=jetbrains-mono@400,500,700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 /* ============ RESET & VARIABLES ============ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -452,7 +453,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
         <h1 class="page-title" style="margin-bottom:0">Transaktioner</h1>
         <button class="btn btn-primary" onclick="openModal('csvUploadModal')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Upload CSV
+          Upload CSV / Excel
         </button>
       </div>
       <div class="card mb-16">
@@ -477,7 +478,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
         </div>
         <div class="empty-state" id="txEmpty" style="display:none">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-          <p>Upload en CSV-fil for at komme i gang</p>
+          <p>Upload en CSV- eller Excel-fil for at komme i gang</p>
         </div>
       </div>
     </section>
@@ -568,7 +569,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 
 <!-- ======= MODALS ======= -->
 
-<!-- CSV Upload Modal -->
+<!-- CSV / Excel Upload Modal -->
 <div class="modal-overlay" id="csvUploadModal">
   <div class="modal">
     <div class="modal-header">
@@ -588,8 +589,8 @@ textarea.form-input { resize: vertical; min-height: 60px; }
         <select class="form-select" id="csvAccount"></select>
       </div>
       <div class="form-group">
-        <label class="form-label">CSV-fil</label>
-        <input type="file" class="form-input" id="csvFile" accept=".csv">
+        <label class="form-label">Fil (CSV / Excel)</label>
+        <input type="file" class="form-input" id="csvFile" accept=".csv,.xlsx,.xls">
       </div>
       <div id="csvPreview" style="display:none;margin-top:12px">
         <div class="form-label" id="csvPreviewLabel"></div>
@@ -769,17 +770,17 @@ textarea.form-input { resize: vertical; min-height: 60px; }
   </div>
 </div>
 
-<!-- Company Financials CSV Upload Modal -->
+<!-- Company Financials CSV / Excel Upload Modal -->
 <div class="modal-overlay" id="companyFinModal">
   <div class="modal">
     <div class="modal-header">
-      <h3>Upload Regnskab (CSV)</h3>
+      <h3>Upload Regnskab (CSV / Excel)</h3>
       <button class="btn-icon" onclick="closeModal('companyFinModal')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="modal-body">
-      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">CSV med kolonner: year, revenue, expenses, profit, equity</p>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">CSV / Excel med kolonner: year, revenue, expenses, profit, equity</p>
       <div class="form-group">
-        <input type="file" class="form-input" id="companyFinFile" accept=".csv">
+        <input type="file" class="form-input" id="companyFinFile" accept=".csv,.xlsx,.xls">
       </div>
       <input type="hidden" id="companyFinId">
     </div>
@@ -1286,6 +1287,45 @@ function renderMonthlyChart() {
   });
 }
 
+// ============ FILE PARSING (CSV + Excel) ============
+function isExcelFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  return ext === 'xlsx' || ext === 'xls';
+}
+
+function readFileAsRows(file, opts, callback) {
+  /* Reads a CSV or Excel file and returns rows as array-of-objects via callback.
+     opts: { delimiter } — only used for CSV fallback.
+     callback(rows) where rows = [{col: val, ...}, ...] */
+  if (isExcelFile(file)) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        const firstSheet = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+        callback(rows);
+      } catch (err) {
+        alert('Kunne ikke læse Excel-filen: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const text = e.target.result;
+      let parsed = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: opts.dynamicTyping || false, delimiter: opts.delimiter || undefined });
+      // If semicolon-delimited CSV gave bad results, try comma
+      if (opts.trySemicolon && (!parsed.data || parsed.data.length === 0)) {
+        parsed = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: opts.dynamicTyping || false, delimiter: ';' });
+      }
+      callback(parsed.data || []);
+    };
+    reader.readAsText(file);
+  }
+}
+
 // CSV Processing
 function initAccountSelect() {
   const accounts = loadData(STORAGE_KEYS.accounts);
@@ -1310,19 +1350,12 @@ function processCSV() {
   if (!fileInput.files || !fileInput.files[0]) return;
 
   const file = fileInput.files[0];
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const text = e.target.result;
-    let parsed;
-    if (bank === 'ringkjobing') {
-      parsed = Papa.parse(text, { delimiter: ';', header: true, skipEmptyLines: true });
-    } else {
-      parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
-    }
+  const csvOpts = { delimiter: bank === 'ringkjobing' ? ';' : undefined };
 
+  readFileAsRows(file, csvOpts, function(rows) {
     const transactions = loadData(STORAGE_KEYS.transactions);
     let count = 0;
-    parsed.data.forEach(row => {
+    rows.forEach(row => {
       let tx = null;
       if (bank === 'revolut') {
         tx = parseRevolutRow(row, accountId);
@@ -1338,8 +1371,7 @@ function processCSV() {
     document.getElementById('csvPreview').style.display = 'none';
     renderTransactions();
     renderMonthlyChart();
-  };
-  reader.readAsText(file);
+  });
 }
 
 function parseRevolutRow(row, accountId) {
@@ -1779,7 +1811,7 @@ function renderCompanies() {
         <div style="margin-top:12px;margin-bottom:12px">
           <button class="btn btn-secondary btn-sm" onclick="openCompanyFinUpload('${c.id}')">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            Upload Regnskab (CSV)
+            Upload Regnskab (CSV / Excel)
           </button>
         </div>
         ${compFin.length > 0 ? `
@@ -1796,7 +1828,7 @@ function renderCompanies() {
               </tr>`).join('')}</tbody>
             </table>
           </div>
-        ` : '<p style="font-size:12px;color:var(--text-muted)">Ingen regnskabsdata — upload en CSV</p>'}
+        ` : '<p style="font-size:12px;color:var(--text-muted)">Ingen regnskabsdata — upload en CSV / Excel</p>'}
         
         ${c.cvrUpdated ? `<div style="margin-top:12px;font-size:11px;color:var(--text-faint)">CVR-data opdateret: ${fmtDate(c.cvrUpdated)}</div>` : ''}
       </div>
@@ -1940,20 +1972,15 @@ function processCompanyFinCSV() {
   const fileInput = document.getElementById('companyFinFile');
   if (!fileInput.files || !fileInput.files[0]) return;
 
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const text = e.target.result;
-    // Try both comma and semicolon
-    let parsed = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: true });
-    if (!parsed.data || parsed.data.length === 0) {
-      parsed = Papa.parse(text, { header: true, delimiter: ';', skipEmptyLines: true, dynamicTyping: true });
-    }
+  const file = fileInput.files[0];
+  const csvOpts = { dynamicTyping: true, trySemicolon: true };
 
+  readFileAsRows(file, csvOpts, function(rows) {
     let financials = loadData(STORAGE_KEYS.financials);
     // Remove old financials for this company
     financials = financials.filter(f => f.companyId !== companyId);
 
-    parsed.data.forEach(row => {
+    rows.forEach(row => {
       const year = row.year || row.Year || row.år || row.År;
       if (!year) return;
       const parseNum = v => {
@@ -1976,8 +2003,7 @@ function processCompanyFinCSV() {
     closeModal('companyFinModal');
     expandedCompany = companyId;
     renderCompanies();
-  };
-  reader.readAsText(fileInput.files[0]);
+  });
 }
 
 function renderCompanyFinChart(companyId, data) {
