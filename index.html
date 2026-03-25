@@ -1660,7 +1660,7 @@ function parseRevolutRow(row, accountId) {
   // Skip incomplete or reverted transactions
   if (state && state.toUpperCase() === 'REVERTED') return null;
   if (!date || amount === undefined || amount === '') return null;
-  amount = parseFloat(String(amount).replace(',', '.'));
+  amount = parseDanishNumber(amount);
   if (isNaN(amount)) return null;
 
   return {
@@ -1675,6 +1675,27 @@ function parseRevolutRow(row, accountId) {
   };
 }
 
+// Smart tal-parser: håndterer både dansk (1.234,56) og internationalt (1234.56) format
+function parseDanishNumber(v) {
+  if (typeof v === 'number') return v; // Allerede et tal (fra Excel/SheetJS)
+  if (!v) return NaN;
+  const s = String(v).trim();
+  // Detect format: Hvis strengen har komma som sidste separator → dansk format
+  const lastComma = s.lastIndexOf(',');
+  const lastDot = s.lastIndexOf('.');
+  if (lastComma > lastDot) {
+    // Dansk: 1.234,56 eller 234,56 → fjern tusind-punktummer, erstat komma med punktum
+    return parseFloat(s.replace(/\./g, '').replace(',', '.'));
+  } else if (lastDot > lastComma && lastComma === -1) {
+    // Internationalt: 1234.56 eller 1,234.56 → fjern tusind-kommaer
+    return parseFloat(s.replace(/,/g, ''));
+  } else if (lastDot > lastComma) {
+    // Blandet: 1,234.56 → engelsk format
+    return parseFloat(s.replace(/,/g, ''));
+  }
+  return parseFloat(s);
+}
+
 function parseRingkjobingRow(row, accountId) {
   // Headers: Dato, Tekst, Beløb (semicolon-separated, comma decimals)
   const date = row['Dato'] || row['dato'];
@@ -1682,8 +1703,7 @@ function parseRingkjobingRow(row, accountId) {
   let amount = row['Beløb'] || row['beløb'] || row['Belob'] || row['belob'];
 
   if (!date || amount === undefined || amount === '') return null;
-  // Danish number: 1.234,56 → remove dots, replace comma with dot
-  amount = parseFloat(String(amount).replace(/\./g, '').replace(',', '.'));
+  amount = parseDanishNumber(amount);
   if (isNaN(amount)) return null;
 
   return {
