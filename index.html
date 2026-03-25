@@ -20,6 +20,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<link rel="manifest" href="/manifest.json">
 <title>WealthHealth — Overblik over din økonomi</title>
 <link href="https://api.fontshare.com/v2/css?f[]=general-sans@200,300,400,500,600,700&f[]=jetbrains-mono@400,500,700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
@@ -1089,7 +1090,7 @@ function genId() {
 }
 
 // ============ CATEGORIES ============
-const TX_CATEGORIES = ['Bolig','Mad & Dagligvarer','Transport','Underholdning','Shopping','Sundhed','Forsikring','Abonnementer','Rejser','Uddannelse','Investering','Overførsel','Løn','Indtægt','Andet'];
+const TX_CATEGORIES = ['Bolig','Mad & Dagligvarer','Café & Kaffe','Takeaway','Transport','Underholdning','Shopping','Sundhed','Forsikring','Abonnementer','Rejser','Uddannelse','Investering','Overførsel','Refundering','Løn','Indtægt','Andet'];
 const ASSET_CATEGORIES = {property:'Ejendomme',stocks:'Aktier & ETF',crypto:'Crypto',collectibles:'Samleobjekter',startup:'Startup Investeringer',pension:'Pension',cash:'Kontanter',other:'Andet'};
 const LIABILITY_CATEGORIES = {mortgage:'Realkreditlån',loan:'Lån',credit:'Kredit',other:'Andet'};
 
@@ -1105,22 +1106,57 @@ const ACCOUNT_TYPES = {
 const SPV_STATUSES = { aktiv: 'Aktiv', exit: 'Exit', nedskrevet: 'Nedskrevet' };
 
 const CATEGORY_RULES = [
-  { pattern: /løn|salary|wage|payroll/i, category: 'Løn' },
-  { pattern: /husleje|bolig|ejendom/i, category: 'Bolig' },
-  { pattern: /netto|rema|føtex|coop|daglig|\birma\b|aldi|lidl|bilka|meny|\bspar\b/i, category: 'Mad & Dagligvarer' },
-  { pattern: /dsb|rejsekort|metro|benzin|parkering|uber|bolt|taxa|q8|circle|shell/i, category: 'Transport' },
-  { pattern: /spotify|netflix|biograf|disney|hbo|viaplay|youtube/i, category: 'Underholdning' },
-  { pattern: /zalando|\bhm\b|h&m|amazon|asos|matas|magasin|elgiganten/i, category: 'Shopping' },
-  { pattern: /apotek|læge|tandlæge|fitness|gym/i, category: 'Sundhed' },
-  { pattern: /forsikring|tryg|topdanmark|alm\.brand|gjensidige/i, category: 'Forsikring' },
-  { pattern: /abonnement|mobil|internet|telia|telmore|yousee/i, category: 'Abonnementer' },
-  { pattern: /fly|hotel|airbnb|booking|rejse|sas|ryanair/i, category: 'Rejser' },
+  // Løn / Indtægt
+  { pattern: /l\u00f8n|salary|wage|payroll|betaling fra/i, category: 'L\u00f8n' },
+  // Bolig
+  { pattern: /husleje|bolig|ejendom|m\u00f8belkompagniet|\bilva\b|ikea|jysk|homely/i, category: 'Bolig' },
+  // Mad & Dagligvarer — supermarkeder, b\u00f8rnl\u00f8s, delikatesser
+  { pattern: /netto|rema|f\u00f8tex|coop|daglig|\birma\b|aldi|lidl|bilka|meny|\bspar\b|7-eleven|7eleven|365discount|brugsen|kvickly|fakta|emmerys|lagkagehuset|meyers|\bbodenhoff\b|kcal|matraws|fresh out the oven|netto markt|dao\b/i, category: 'Mad & Dagligvarer' },
+  // Caf\u00e9 & Kaffe
+  { pattern: /coffee|kaffe|espresso house|joe.*juice|la cabra|starbucks|baresso|\bcafee?\b|original coffee|goldfinch|april coffee/i, category: 'Caf\u00e9 & Kaffe' },
+  // Transport
+  { pattern: /dsb|rejsekort|metro|benzin|parkering|uber|bolt|taxa|q8|circle|shell|easypark|ok tank|f24|uno-x|gls|general logistics|postnord|dao(?!$)/i, category: 'Transport' },
+  // Underholdning
+  { pattern: /spotify|netflix|biograf|disney|hbo|viaplay|youtube|playstation|blizzard|xbox|steam|twitch|ticketmaster|billetto|bella center|boerneboblen/i, category: 'Underholdning' },
+  // Shopping — fysisk + online
+  { pattern: /zalando|\bhm\b|h&m|amazon|asos|matas|magasin|elgiganten|\billum\b|power\b|proshop|vinted|fruugo|schibsted|\bdba\b|quickpoint|pinploy|cards kbh|letsgradecards|wwwkelz0r/i, category: 'Shopping' },
+  // Sundhed
+  { pattern: /apotek|l\u00e6ge|tandl\u00e6ge|fitness|gym|pulsure|andcards abk/i, category: 'Sundhed' },
+  // Forsikring
+  { pattern: /forsikring|tryg|topdanmark|alm\.brand|gjensidige|\bif\b forsikring/i, category: 'Forsikring' },
+  // Abonnementer & Software
+  { pattern: /abonnement|mobil|internet|telia|telmore|yousee|apple\.com|\bapple\b|perplexity|lovable|coinbase|icloud|chatgpt|openai|notion|figma|github/i, category: 'Abonnementer' },
+  // Rejser
+  { pattern: /fly|hotel|airbnb|booking|rejse|sas|ryanair|momondo|norwegian|easyjet|sp aioss/i, category: 'Rejser' },
+  // Takeaway / Restauranter
+  { pattern: /wolt|just eat|hungry|deliveroo|takeaway|little house|restaurant|madklub/i, category: 'Takeaway' },
+  // Overf\u00f8rsler (MobilePay, Revolut)
+  { pattern: /mob\.pay|mobilepay|overf\u00f8rsel|vekslet til/i, category: 'Overf\u00f8rsel' },
+  // Investering
+  { pattern: /coinbase|\bsaxo\b|nordnet|\btrade\b|etoro|crypto|aktie/i, category: 'Investering' },
 ];
 
-function autoCategory(desc) {
-  if (!desc) return 'Andet';
-  for (const rule of CATEGORY_RULES) {
-    if (rule.pattern.test(desc)) return rule.category;
+// Revolut Type-kolonne → fallback-kategori (bruges når desc ikke matcher)
+const REVOLUT_TYPE_MAP = {
+  'indbetaling': 'L\u00f8n',
+  'veksling': 'Overf\u00f8rsel',
+  'overf\u00f8rsel': 'Overf\u00f8rsel',
+  'refundering til kort': 'Refundering',
+  'topup': 'Indbetaling',
+};
+
+function autoCategory(desc, rowType) {
+  if (!desc && !rowType) return 'Andet';
+  // 1. Pr\u00f8v beskrivelse f\u00f8rst (mest pr\u00e6cis)
+  if (desc) {
+    for (const rule of CATEGORY_RULES) {
+      if (rule.pattern.test(desc)) return rule.category;
+    }
+  }
+  // 2. Fallback til Revolut Type-kolonne
+  if (rowType) {
+    const mapped = REVOLUT_TYPE_MAP[rowType.toLowerCase()];
+    if (mapped) return mapped;
   }
   return 'Andet';
 }
@@ -1619,6 +1655,7 @@ function parseRevolutRow(row, accountId) {
   let amount = row['Amount'] !== undefined ? row['Amount'] : row['Beløb'];
   const currency = row['Currency'] || row['Valuta'] || 'DKK';
   const state = row['State'] || row['Status'] || '';
+  const rowType = row['Type'] || '';
 
   // Skip incomplete or reverted transactions
   if (state && state.toUpperCase() === 'REVERTED') return null;
@@ -1632,7 +1669,7 @@ function parseRevolutRow(row, accountId) {
     description: desc.trim(),
     amount,
     currency,
-    category: autoCategory(desc),
+    category: autoCategory(desc, rowType),
     accountId,
     source: 'revolut',
   };
@@ -2862,6 +2899,11 @@ function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+// ============ SERVICE WORKER (anti-cache) ============
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
 </script>
 </body>
 </html>
