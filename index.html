@@ -1610,12 +1610,18 @@ function processCSV() {
 }
 
 function parseRevolutRow(row, accountId) {
-  // Headers: Started Date, Description, Amount, Currency (and others like Type, Product, etc.)
-  const date = row['Started Date'] || row['Completed Date'] || row['Date'];
-  const desc = row['Description'] || '';
-  let amount = row['Amount'];
-  const currency = row['Currency'] || 'DKK';
+  // Supports both English and Danish Revolut CSV headers
+  // EN: Started Date, Completed Date, Description, Amount, Currency, Type, Product, State
+  // DA: Startdato, Fuldførelsesdato, Beskrivelse, Beløb, Valuta, Type, Produkt, State
+  const date = row['Started Date'] || row['Completed Date'] || row['Date']
+    || row['Startdato'] || row['Fuldførelsesdato'] || row['Dato'];
+  const desc = row['Description'] || row['Beskrivelse'] || '';
+  let amount = row['Amount'] !== undefined ? row['Amount'] : row['Beløb'];
+  const currency = row['Currency'] || row['Valuta'] || 'DKK';
+  const state = row['State'] || row['Status'] || '';
 
+  // Skip incomplete or reverted transactions
+  if (state && state.toUpperCase() === 'REVERTED') return null;
   if (!date || amount === undefined || amount === '') return null;
   amount = parseFloat(String(amount).replace(',', '.'));
   if (isNaN(amount)) return null;
