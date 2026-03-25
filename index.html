@@ -365,6 +365,78 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 .company-pu-item { font-size: 12px; padding: 6px 8px; background: var(--bg); border-radius: var(--radius-sm); margin-bottom: 4px; }
 .company-pu-item .pu-name { font-weight: 500; }
 .company-pu-item .pu-meta { color: var(--text-muted); font-size: 11px; }
+
+/* ============ SPV/STARTUP ============ */
+.spv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.spv-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; transition: border-color 0.15s;
+}
+.spv-card:hover { border-color: hsl(220, 15%, 28%); }
+.spv-status-badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px;
+  border-radius: 4px; font-size: 11px; font-weight: 600;
+}
+.spv-status-badge.aktiv { background: hsla(152,60%,38%,0.12); color: var(--success); }
+.spv-status-badge.exit { background: hsla(175,60%,38%,0.12); color: var(--primary); }
+.spv-status-badge.nedskrevet { background: hsla(0,72%,51%,0.1); color: var(--danger); }
+.spv-value-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.spv-value-row .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+.spv-value-row .value { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.spv-gain { color: var(--success); }
+.spv-loss { color: var(--danger); }
+
+/* ============ ACCOUNT SPLIT ============ */
+.account-kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.account-kpi {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.account-kpi .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); margin-bottom: 4px; }
+.account-kpi .value { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.account-tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+.account-tab {
+  padding: 6px 14px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 500;
+  background: transparent; border: 1px solid var(--border); color: var(--text-muted);
+  cursor: pointer; transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+}
+.account-tab:hover { background: var(--surface-hover); color: var(--text); }
+.account-tab.active { background: var(--primary-subtle); color: var(--primary); border-color: var(--primary); }
+.account-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 16px; }
+.account-bar-segment { transition: width 0.3s ease; }
+
+/* ============ AI ANALYSE ============ */
+.ai-chat { margin-top: 16px; }
+.ai-prompt-area { display: flex; gap: 8px; margin-bottom: 16px; }
+.ai-prompt-area input { flex: 1; }
+.ai-messages { display: flex; flex-direction: column; gap: 12px; }
+.ai-msg {
+  padding: 14px 16px; border-radius: var(--radius); font-size: 13px; line-height: 1.6;
+  max-width: 100%;
+}
+.ai-msg.user {
+  background: var(--primary-subtle); align-self: flex-end; max-width: 80%; border: 1px solid hsla(175,60%,38%,0.2);
+}
+.ai-msg.assistant {
+  background: var(--surface); border: 1px solid var(--border); align-self: flex-start;
+}
+.ai-msg.assistant ul { margin: 8px 0; padding-left: 18px; }
+.ai-msg.assistant li { margin-bottom: 4px; }
+.ai-msg.assistant strong { color: var(--text); }
+.ai-loading { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 13px; padding: 12px 16px; }
+.ai-loading .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); animation: aiPulse 1.2s ease-in-out infinite; }
+.ai-loading .dot:nth-child(2) { animation-delay: 0.2s; }
+.ai-loading .dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes aiPulse { 0%,100% { opacity:0.3; transform:scale(0.8); } 50% { opacity:1; transform:scale(1.2); } }
+.ai-quick-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.ai-quick-btn {
+  padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text-muted);
+  cursor: pointer; transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+}
+.ai-quick-btn:hover { background: var(--surface-hover); color: var(--text); border-color: var(--primary); }
+.ai-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+@media (max-width: 768px) { .ai-summary-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -400,9 +472,17 @@ textarea.form-input { resize: vertical; min-height: 60px; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
         <span>Selskaber</span>
       </div>
+      <div class="nav-item" data-page="spv" onclick="navigate('spv')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        <span>SPV / Startups</span>
+      </div>
       <div class="nav-item" data-page="market" onclick="navigate('market')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
         <span>Marked</span>
+      </div>
+      <div class="nav-item" data-page="ai" onclick="navigate('ai')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        <span>AI Analyse</span>
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -460,6 +540,11 @@ textarea.form-input { resize: vertical; min-height: 60px; }
         <div class="card-title">Månedlig Oversigt</div>
         <div class="chart-container" style="height:250px"><canvas id="chartMonthly"></canvas></div>
       </div>
+
+      <!-- Konto / Forbrugsopdeling -->
+      <div class="account-kpi-grid" id="accountKpiGrid"></div>
+      <div class="account-bar" id="accountBar"></div>
+      <div class="account-tabs" id="accountTabs"></div>
       <div class="filter-bar">
         <div class="search-wrap">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -468,11 +553,14 @@ textarea.form-input { resize: vertical; min-height: 60px; }
         <select class="filter-select" id="txCategoryFilter" onchange="renderTransactions()">
           <option value="">Alle kategorier</option>
         </select>
+        <select class="filter-select" id="txAccountTypeFilter" onchange="renderTransactions()">
+          <option value="">Alle kontotyper</option>
+        </select>
       </div>
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Dato</th><th>Beskrivelse</th><th>Kategori</th><th style="text-align:right">Beløb</th><th style="width:40px"></th></tr></thead>
+            <thead><tr><th>Dato</th><th>Beskrivelse</th><th>Kategori</th><th>Kontotype</th><th style="text-align:right">Beløb</th><th style="width:40px"></th></tr></thead>
             <tbody id="txTableBody"></tbody>
           </table>
         </div>
@@ -540,6 +628,24 @@ textarea.form-input { resize: vertical; min-height: 60px; }
       </div>
     </section>
 
+
+    <!-- ====== SPV / STARTUPS PAGE ====== -->
+    <section class="page" id="page-spv">
+      <div class="flex-between mb-16">
+        <h1 class="page-title" style="margin-bottom:0">SPV / Startups</h1>
+        <button class="btn btn-primary" onclick="openSpvModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Tilføj Investering
+        </button>
+      </div>
+      <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr)" id="spvKpiGrid"></div>
+      <div class="tabs mb-16" id="spvStatusTabs"></div>
+      <div class="spv-grid" id="spvGrid"></div>
+      <div class="empty-state" id="spvEmpty" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        <p>Tilføj din første startup- eller SPV-investering</p>
+      </div>
+    </section>
     <!-- ====== MARKET PAGE ====== -->
     <section class="page" id="page-market">
       <div class="flex-between mb-16">
@@ -564,6 +670,38 @@ textarea.form-input { resize: vertical; min-height: 60px; }
       </div>
     </section>
 
+
+    <!-- ====== AI ANALYSE PAGE ====== -->
+    <section class="page" id="page-ai">
+      <div class="flex-between mb-16">
+        <h1 class="page-title" style="margin-bottom:0">AI Analyse</h1>
+        <button class="btn btn-secondary btn-sm" onclick="clearAiChat()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Ryd samtale
+        </button>
+      </div>
+      <div class="ai-summary-grid" id="aiSummaryGrid"></div>
+      <div class="card">
+        <div class="card-title">Spørg din AI-rådgiver</div>
+        <div class="ai-quick-actions">
+          <button class="ai-quick-btn" onclick="askAi('Giv mig et overblik over min økonomi og forslag til optimering')">Økonomisk overblik</button>
+          <button class="ai-quick-btn" onclick="askAi('Analyser mit forbrug og find besparelsesmuligheder')">Forbrugsanalyse</button>
+          <button class="ai-quick-btn" onclick="askAi('Vurder mine investeringer og kom med anbefalinger')">Investeringsrådgivning</button>
+          <button class="ai-quick-btn" onclick="askAi('Hvad er min opsparingsrate og hvordan kan jeg forbedre den?')">Opsparingsrate</button>
+          <button class="ai-quick-btn" onclick="askAi('Analyser mine SPV/startup-investeringer')">SPV-analyse</button>
+        </div>
+        <div class="ai-chat">
+          <div class="ai-prompt-area">
+            <input type="text" class="form-input" id="aiPrompt" placeholder="Spørg om din økonomi..." onkeydown="if(event.key==='Enter')sendAiPrompt()">
+            <button class="btn btn-primary" onclick="sendAiPrompt()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Send
+            </button>
+          </div>
+          <div class="ai-messages" id="aiMessages"></div>
+        </div>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -770,6 +908,68 @@ textarea.form-input { resize: vertical; min-height: 60px; }
   </div>
 </div>
 
+
+<!-- SPV / Startup Modal -->
+<div class="modal-overlay" id="spvModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3 id="spvModalTitle">Tilføj Investering</h3>
+      <button class="btn-icon" onclick="closeModal('spvModal')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Selskabsnavn</label>
+        <input type="text" class="form-input" id="spvName" placeholder="f.eks. TechStartup ApS">
+      </div>
+      <div class="form-group">
+        <label class="form-label">CVR (valgfrit)</label>
+        <input type="text" class="form-input" id="spvCvr" placeholder="f.eks. 41234567">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Investeret beløb</label>
+        <input type="number" class="form-input" id="spvInvested" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Estimeret nuværende værdi</label>
+        <input type="number" class="form-input" id="spvCurrentValue" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ejerandel (%)</label>
+        <input type="number" class="form-input" id="spvOwnership" placeholder="0" step="0.01" min="0" max="100">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Investeringsdato</label>
+        <input type="date" class="form-input" id="spvDate">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Valuta</label>
+        <select class="form-select" id="spvCurrency">
+          <option value="DKK">DKK</option>
+          <option value="EUR">EUR</option>
+          <option value="USD">USD</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-select" id="spvStatus">
+          <option value="aktiv">Aktiv</option>
+          <option value="exit">Exit</option>
+          <option value="nedskrevet">Nedskrevet</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Noter</label>
+        <textarea class="form-input" id="spvNotes" placeholder="Valgfrit — f.eks. SPV-struktur, medejere, runde..."></textarea>
+      </div>
+      <input type="hidden" id="spvEditId">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('spvModal')">Annuller</button>
+      <button class="btn btn-primary" onclick="saveSpv()">Gem</button>
+    </div>
+  </div>
+</div>
+
 <!-- Company Financials CSV / Excel Upload Modal -->
 <div class="modal-overlay" id="companyFinModal">
   <div class="modal">
@@ -812,6 +1012,7 @@ const STORAGE_KEYS = {
   snapshots: 'wv_snapshots',
   watchlist: 'wv_watchlist',
   accounts: 'wv_accounts',
+  spv: 'wv_spv',
 };
 
 // Supabase table mapping (for cloud sync when tables exist)
@@ -822,6 +1023,7 @@ const SUPABASE_TABLES = {
   wv_companies: 'wv_companies',
   wv_snapshots: 'wv_snapshots',
   wv_watchlist: 'wv_watchlist',
+  wv_spv: 'wv_spv',
 };
 
 let supabaseReady = false;
@@ -891,6 +1093,17 @@ const TX_CATEGORIES = ['Bolig','Mad & Dagligvarer','Transport','Underholdning','
 const ASSET_CATEGORIES = {property:'Ejendomme',stocks:'Aktier & ETF',crypto:'Crypto',collectibles:'Samleobjekter',startup:'Startup Investeringer',pension:'Pension',cash:'Kontanter',other:'Andet'};
 const LIABILITY_CATEGORIES = {mortgage:'Realkreditlån',loan:'Lån',credit:'Kredit',other:'Andet'};
 
+const ACCOUNT_TYPES = {
+  privat: 'Privatforbrug',
+  faelles: 'Fællesforbrug',
+  faelles_opsparing: 'Fællesopsparing',
+  barn: 'Barnets konto',
+  opsparing: 'Opsparing',
+  investering: 'Investering',
+  andet: 'Andet',
+};
+const SPV_STATUSES = { aktiv: 'Aktiv', exit: 'Exit', nedskrevet: 'Nedskrevet' };
+
 const CATEGORY_RULES = [
   { pattern: /løn|salary|wage|payroll/i, category: 'Løn' },
   { pattern: /husleje|bolig|ejendom/i, category: 'Bolig' },
@@ -957,6 +1170,8 @@ function renderCurrentPage() {
     case 'liabilities': renderLiabilities(); break;
     case 'companies': renderCompanies(); break;
     case 'market': renderWatchlist(); break;
+    case 'spv': renderSpv(); break;
+    case 'ai': renderAiPage(); break;
   }
 }
 
@@ -1170,10 +1385,17 @@ function renderTransactions() {
   const search = (document.getElementById('txSearch').value || '').toLowerCase();
   const catFilter = document.getElementById('txCategoryFilter').value;
 
+  const acctTypeFilter = document.getElementById('txAccountTypeFilter') ? document.getElementById('txAccountTypeFilter').value : '';
+  
   let filtered = transactions;
   if (search) filtered = filtered.filter(t => (t.description || '').toLowerCase().includes(search));
   if (catFilter) filtered = filtered.filter(t => t.category === catFilter);
+  if (acctTypeFilter) filtered = filtered.filter(t => (t.accountType || 'andet') === acctTypeFilter);
+  if (activeAccountType) filtered = filtered.filter(t => (t.accountType || 'andet') === activeAccountType);
   filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+  
+  // Render account split
+  renderAccountSplit();
 
   const tbody = document.getElementById('txTableBody');
   const empty = document.getElementById('txEmpty');
@@ -1182,7 +1404,7 @@ function renderTransactions() {
     tbody.innerHTML = '';
     empty.style.display = transactions.length === 0 ? 'block' : 'none';
     if (transactions.length > 0 && filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:32px">Ingen transaktioner matcher</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:32px">Ingen transaktioner matcher</td></tr>';
     }
     return;
   }
@@ -1191,6 +1413,7 @@ function renderTransactions() {
   tbody.innerHTML = filtered.map(t => {
     const amt = parseFloat(t.amount) || 0;
     const cls = amt >= 0 ? 'amount-positive' : 'amount-negative';
+    const acctType = t.accountType || 'andet';
     return `<tr>
       <td>${fmtDate(t.date)}</td>
       <td>${esc(t.description)}</td>
@@ -1199,13 +1422,19 @@ function renderTransactions() {
           ${TX_CATEGORIES.map(c => `<option value="${c}" ${t.category === c ? 'selected' : ''}>${c}</option>`).join('')}
         </select>
       </td>
+      <td>
+        <select class="filter-select" style="padding:4px 28px 4px 8px;font-size:12px" onchange="updateTxAccountType('${t.id}', this.value)">
+          ${Object.entries(ACCOUNT_TYPES).map(([k, v]) => `<option value="${k}" ${acctType === k ? 'selected' : ''}>${v}</option>`).join('')}
+        </select>
+      </td>
       <td style="text-align:right" class="${cls}">${fmtCurrency(amt, t.currency || 'DKK')}</td>
       <td><button class="btn-icon" onclick="deleteTx('${t.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></td>
     </tr>`;
   }).join('');
 
-  // Populate category filter if needed
+  // Populate filters
   populateTxCategoryFilter();
+  populateAccountTypeFilter();
 }
 
 function populateTxCategoryFilter() {
@@ -1220,6 +1449,12 @@ function updateTxCategory(id, category) {
   const transactions = loadData(STORAGE_KEYS.transactions);
   const tx = transactions.find(t => t.id === id);
   if (tx) { tx.category = category; saveData(STORAGE_KEYS.transactions, transactions); }
+}
+
+function updateTxAccountType(id, accountType) {
+  const transactions = loadData(STORAGE_KEYS.transactions);
+  const tx = transactions.find(t => t.id === id);
+  if (tx) { tx.accountType = accountType; saveData(STORAGE_KEYS.transactions, transactions); renderAccountSplit(); }
 }
 
 function deleteTx(id) {
@@ -2206,6 +2441,411 @@ function esc(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+
+// ============ ACCOUNT TYPES / SPENDING SPLIT ============
+let activeAccountType = '';
+
+function renderAccountSplit() {
+  const transactions = loadData(STORAGE_KEYS.transactions);
+  const kpiGrid = document.getElementById('accountKpiGrid');
+  const bar = document.getElementById('accountBar');
+  const tabs = document.getElementById('accountTabs');
+  if (!kpiGrid) return;
+
+  // Group by accountType
+  const totals = {};
+  const colors = { privat: '#20808D', faelles: '#A84B2F', faelles_opsparing: '#4db88b', barn: '#FFC553', opsparing: '#BCE2E7', investering: '#944454', andet: '#848456' };
+  let grandTotal = 0;
+
+  transactions.forEach(t => {
+    const type = t.accountType || 'andet';
+    const amt = Math.abs(parseFloat(t.amount) || 0);
+    totals[type] = (totals[type] || 0) + amt;
+    grandTotal += amt;
+  });
+
+  // KPI cards
+  kpiGrid.innerHTML = Object.entries(ACCOUNT_TYPES).filter(([k]) => totals[k] > 0).map(([key, label]) => `
+    <div class="account-kpi" style="border-left:3px solid ${colors[key] || 'var(--border)'}">
+      <div class="label">${label}</div>
+      <div class="value">${fmtCurrency(totals[key] || 0)}</div>
+    </div>
+  `).join('');
+
+  // Bar chart
+  if (grandTotal > 0) {
+    bar.innerHTML = Object.entries(ACCOUNT_TYPES).filter(([k]) => totals[k] > 0).map(([key]) => {
+      const pct = ((totals[key] || 0) / grandTotal * 100).toFixed(1);
+      return `<div class="account-bar-segment" style="width:${pct}%;background:${colors[key]}" title="${ACCOUNT_TYPES[key]}: ${pct}%"></div>`;
+    }).join('');
+  } else {
+    bar.innerHTML = '<div class="account-bar-segment" style="width:100%;background:var(--border)"></div>';
+  }
+
+  // Tabs
+  const allTypes = [{ key: '', label: 'Alle' }, ...Object.entries(ACCOUNT_TYPES).map(([k, v]) => ({ key: k, label: v }))];
+  tabs.innerHTML = allTypes.map(t =>
+    `<div class="account-tab ${activeAccountType === t.key ? 'active' : ''}" onclick="activeAccountType='${t.key}';renderTransactions()">${t.label}</div>`
+  ).join('');
+}
+
+function populateAccountTypeFilter() {
+  const sel = document.getElementById('txAccountTypeFilter');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Alle kontotyper</option>' + Object.entries(ACCOUNT_TYPES).map(([k, v]) => 
+    `<option value="${k}" ${k === current ? 'selected' : ''}>${v}</option>`
+  ).join('');
+}
+
+// ============ SPV / STARTUPS ============
+let spvFilterStatus = 'all';
+
+function renderSpv() {
+  const spvs = loadData(STORAGE_KEYS.spv);
+  const grid = document.getElementById('spvGrid');
+  const empty = document.getElementById('spvEmpty');
+  const kpiGrid = document.getElementById('spvKpiGrid');
+
+  // KPI
+  const totalInvested = spvs.reduce((s, x) => s + (parseFloat(x.invested) || 0), 0);
+  const totalCurrent = spvs.reduce((s, x) => s + (parseFloat(x.currentValue) || 0), 0);
+  const totalGain = totalCurrent - totalInvested;
+
+  kpiGrid.innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Investeret</div><div class="kpi-value">${fmtCurrency(totalInvested)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Nuværende Værdi</div><div class="kpi-value">${fmtCurrency(totalCurrent)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Urealiseret G/T</div><div class="kpi-value ${totalGain >= 0 ? 'amount-positive' : 'amount-negative'}">${fmtCurrency(totalGain)}</div></div>
+  `;
+
+  // Status tabs
+  const tabsEl = document.getElementById('spvStatusTabs');
+  const statusCounts = { all: spvs.length };
+  spvs.forEach(s => { statusCounts[s.status] = (statusCounts[s.status] || 0) + 1; });
+  const tabs = [{ key: 'all', label: 'Alle' }, ...Object.entries(SPV_STATUSES).map(([k, v]) => ({ key: k, label: v }))];
+  tabsEl.innerHTML = tabs.map(t =>
+    `<div class="tab ${spvFilterStatus === t.key ? 'active' : ''}" onclick="spvFilterStatus='${t.key}';renderSpv()">${t.label} ${statusCounts[t.key] ? '(' + statusCounts[t.key] + ')' : ''}</div>`
+  ).join('');
+
+  // Filter
+  let filtered = spvs;
+  if (spvFilterStatus !== 'all') filtered = spvs.filter(s => s.status === spvFilterStatus);
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '';
+    empty.style.display = spvs.length === 0 ? 'block' : 'none';
+    return;
+  }
+  empty.style.display = 'none';
+
+  grid.innerHTML = filtered.map(s => {
+    const gain = (parseFloat(s.currentValue) || 0) - (parseFloat(s.invested) || 0);
+    const gainPct = s.invested > 0 ? (gain / s.invested * 100) : 0;
+    const gainClass = gain >= 0 ? 'spv-gain' : 'spv-loss';
+    return `<div class="spv-card">
+      <div class="entity-card-header">
+        <div>
+          <div class="entity-card-title">${esc(s.name)}</div>
+          <span class="spv-status-badge ${s.status}">${SPV_STATUSES[s.status] || s.status}</span>
+          ${s.cvr ? `<div class="entity-card-meta" style="font-family:var(--mono)">CVR: ${esc(s.cvr)}</div>` : ''}
+        </div>
+        <div class="entity-actions">
+          <button class="btn-icon" onclick="editSpv('${s.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="btn-icon" onclick="deleteSpv('${s.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+        </div>
+      </div>
+      ${s.ownership ? `<div class="entity-card-meta">Ejerandel: ${fmtPercent(s.ownership)}</div>` : ''}
+      ${s.investDate ? `<div class="entity-card-meta">Investeret: ${fmtDate(s.investDate)}</div>` : ''}
+      <div class="spv-value-row">
+        <div><div class="label">Investeret</div><div class="value">${fmtCurrency(s.invested, s.currency || 'DKK')}</div></div>
+        <div style="text-align:right"><div class="label">Nuværende</div><div class="value">${fmtCurrency(s.currentValue, s.currency || 'DKK')}</div></div>
+      </div>
+      <div style="text-align:right;margin-top:6px;font-size:12px" class="${gainClass}">${gain >= 0 ? '+' : ''}${fmtCurrency(gain)} (${gainPct >= 0 ? '+' : ''}${fmtPercent(gainPct)})</div>
+      ${s.notes ? `<div class="entity-card-meta" style="margin-top:8px">${esc(s.notes)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function openSpvModal(editId) {
+  document.getElementById('spvModalTitle').textContent = editId ? 'Rediger Investering' : 'Tilføj Investering';
+  document.getElementById('spvEditId').value = editId || '';
+  if (editId) {
+    const spvs = loadData(STORAGE_KEYS.spv);
+    const s = spvs.find(x => x.id === editId);
+    if (s) {
+      document.getElementById('spvName').value = s.name || '';
+      document.getElementById('spvCvr').value = s.cvr || '';
+      document.getElementById('spvInvested').value = s.invested || '';
+      document.getElementById('spvCurrentValue').value = s.currentValue || '';
+      document.getElementById('spvOwnership').value = s.ownership || '';
+      document.getElementById('spvDate').value = s.investDate || '';
+      document.getElementById('spvCurrency').value = s.currency || 'DKK';
+      document.getElementById('spvStatus').value = s.status || 'aktiv';
+      document.getElementById('spvNotes').value = s.notes || '';
+    }
+  } else {
+    ['spvName','spvCvr','spvInvested','spvCurrentValue','spvOwnership','spvDate','spvNotes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('spvCurrency').value = 'DKK';
+    document.getElementById('spvStatus').value = 'aktiv';
+  }
+  openModal('spvModal');
+}
+
+function editSpv(id) { openSpvModal(id); }
+
+function saveSpv() {
+  const editId = document.getElementById('spvEditId').value;
+  const spvs = loadData(STORAGE_KEYS.spv);
+  const obj = {
+    id: editId || genId(),
+    name: document.getElementById('spvName').value.trim(),
+    cvr: document.getElementById('spvCvr').value.trim().replace(/[^0-9]/g, ''),
+    invested: parseFloat(document.getElementById('spvInvested').value) || 0,
+    currentValue: parseFloat(document.getElementById('spvCurrentValue').value) || 0,
+    ownership: parseFloat(document.getElementById('spvOwnership').value) || 0,
+    investDate: document.getElementById('spvDate').value,
+    currency: document.getElementById('spvCurrency').value,
+    status: document.getElementById('spvStatus').value,
+    notes: document.getElementById('spvNotes').value.trim(),
+  };
+  if (!obj.name) return;
+  if (editId) {
+    const idx = spvs.findIndex(s => s.id === editId);
+    if (idx >= 0) spvs[idx] = obj;
+  } else {
+    spvs.push(obj);
+  }
+  saveData(STORAGE_KEYS.spv, spvs);
+  closeModal('spvModal');
+  renderSpv();
+}
+
+function deleteSpv(id) {
+  showDeleteConfirm('Er du sikker på, at du vil slette denne investering?', () => {
+    let spvs = loadData(STORAGE_KEYS.spv);
+    spvs = spvs.filter(s => s.id !== id);
+    saveData(STORAGE_KEYS.spv, spvs);
+    renderSpv();
+  });
+}
+
+// ============ AI ANALYSE ============
+let aiMessages = [];
+let aiLoading = false;
+
+function renderAiPage() {
+  renderAiSummary();
+  renderAiMessages();
+}
+
+function renderAiSummary() {
+  const assets = loadData(STORAGE_KEYS.assets);
+  const liabilities = loadData(STORAGE_KEYS.liabilities);
+  const transactions = loadData(STORAGE_KEYS.transactions);
+  const spvs = loadData(STORAGE_KEYS.spv);
+
+  const totalAssets = assets.reduce((s, a) => s + (parseFloat(a.value) || 0), 0);
+  const totalLiabilities = liabilities.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
+  const totalSpv = spvs.reduce((s, x) => s + (parseFloat(x.currentValue) || 0), 0);
+  const netWorth = totalAssets + totalSpv - totalLiabilities;
+
+  const now = new Date();
+  const thisMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  const monthlySpend = transactions
+    .filter(t => t.date && t.date.startsWith(thisMonth) && parseFloat(t.amount) < 0)
+    .reduce((s, t) => s + Math.abs(parseFloat(t.amount)), 0);
+  const monthlyIncome = transactions
+    .filter(t => t.date && t.date.startsWith(thisMonth) && parseFloat(t.amount) >= 0)
+    .reduce((s, t) => s + parseFloat(t.amount), 0);
+  const savingsRate = monthlyIncome > 0 ? ((monthlyIncome - monthlySpend) / monthlyIncome * 100) : 0;
+
+  const grid = document.getElementById('aiSummaryGrid');
+  grid.innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Net Worth (inkl. SPV)</div><div class="kpi-value">${fmtCurrency(netWorth)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Opsparingsrate (denne md.)</div><div class="kpi-value ${savingsRate >= 0 ? 'amount-positive' : 'amount-negative'}">${fmtPercent(savingsRate)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">SPV-portefølje</div><div class="kpi-value">${fmtCurrency(totalSpv)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Mdl. Forbrug</div><div class="kpi-value">${fmtCurrency(monthlySpend)}</div></div>
+  `;
+}
+
+function gatherFinancialContext() {
+  const assets = loadData(STORAGE_KEYS.assets);
+  const liabilities = loadData(STORAGE_KEYS.liabilities);
+  const transactions = loadData(STORAGE_KEYS.transactions);
+  const spvs = loadData(STORAGE_KEYS.spv);
+  const companies = loadData(STORAGE_KEYS.companies);
+
+  const totalAssets = assets.reduce((s, a) => s + (parseFloat(a.value) || 0), 0);
+  const totalLiabilities = liabilities.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
+  const totalSpvInvested = spvs.reduce((s, x) => s + (parseFloat(x.invested) || 0), 0);
+  const totalSpvCurrent = spvs.reduce((s, x) => s + (parseFloat(x.currentValue) || 0), 0);
+
+  // Monthly breakdown (last 6 months)
+  const now = new Date();
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    const monthTx = transactions.filter(t => t.date && t.date.startsWith(key));
+    const income = monthTx.filter(t => parseFloat(t.amount) >= 0).reduce((s, t) => s + parseFloat(t.amount), 0);
+    const expense = monthTx.filter(t => parseFloat(t.amount) < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount)), 0);
+    months.push({ month: key, income: Math.round(income), expense: Math.round(expense) });
+  }
+
+  // Category spending (current month)
+  const thisMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  const catSpend = {};
+  transactions.filter(t => t.date && t.date.startsWith(thisMonth) && parseFloat(t.amount) < 0).forEach(t => {
+    const cat = t.category || 'Andet';
+    catSpend[cat] = (catSpend[cat] || 0) + Math.abs(parseFloat(t.amount));
+  });
+
+  // Account type spending
+  const acctSpend = {};
+  transactions.filter(t => parseFloat(t.amount) < 0).forEach(t => {
+    const type = t.accountType || 'andet';
+    acctSpend[ACCOUNT_TYPES[type] || type] = (acctSpend[ACCOUNT_TYPES[type] || type] || 0) + Math.abs(parseFloat(t.amount));
+  });
+
+  let ctx = `BRUGERENS FINANSIELLE DATA (WealthHealth):
+- Samlede aktiver: ${Math.round(totalAssets)} DKK
+- Samlet gæld: ${Math.round(totalLiabilities)} DKK
+- Net worth: ${Math.round(totalAssets - totalLiabilities)} DKK
+- SPV/Startup investeret: ${Math.round(totalSpvInvested)} DKK, nuværende værdi: ${Math.round(totalSpvCurrent)} DKK
+- Antal aktiver: ${assets.length}, gældsposter: ${liabilities.length}, transaktioner: ${transactions.length}
+- Antal selskaber: ${companies.length}, SPV-investeringer: ${spvs.length}
+
+AKTIVER:
+${assets.map(a => `  - ${a.name}: ${Math.round(a.value)} ${a.currency || 'DKK'} (${ASSET_CATEGORIES[a.category] || a.category})`).join('\n')}
+
+GÆLD:
+${liabilities.map(l => `  - ${l.name}: ${Math.round(l.amount)} ${l.currency || 'DKK'} (rente: ${l.rate || 0}%)`).join('\n')}
+
+SPV/STARTUPS:
+${spvs.map(s => `  - ${s.name}: investeret ${Math.round(s.invested)} ${s.currency || 'DKK'}, nu ${Math.round(s.currentValue)} ${s.currency || 'DKK'} (${s.status}, ejerandel: ${s.ownership || 0}%)`).join('\n')}
+
+MÅNEDLIGT FLOW (seneste 6 mdr):
+${months.map(m => `  - ${m.month}: indtægt ${m.income} DKK, udgift ${m.expense} DKK`).join('\n')}
+
+KATEGORIFORBRUG (denne måned):
+${Object.entries(catSpend).sort((a,b) => b[1] - a[1]).map(([k,v]) => `  - ${k}: ${Math.round(v)} DKK`).join('\n')}
+
+KONTOTYPE-FORBRUG:
+${Object.entries(acctSpend).sort((a,b) => b[1] - a[1]).map(([k,v]) => `  - ${k}: ${Math.round(v)} DKK`).join('\n')}
+`;
+  return ctx;
+}
+
+function sendAiPrompt() {
+  const input = document.getElementById('aiPrompt');
+  const prompt = input.value.trim();
+  if (!prompt || aiLoading) return;
+  input.value = '';
+  askAi(prompt);
+}
+
+async function askAi(prompt) {
+  if (aiLoading) return;
+  aiLoading = true;
+
+  aiMessages.push({ role: 'user', content: prompt });
+  renderAiMessages();
+
+  const context = gatherFinancialContext();
+  const systemPrompt = `Du er en erfaren dansk finansrådgiver og analytiker integreret i WealthHealth-platformen. Du analyserer brugerens komplette økonomi og giver konkrete, handlingsrettede anbefalinger på dansk. Vær specifik med tal og procenter. Brug bullets og korte afsnit. Brugeren hedder Mark.`;
+
+  try {
+    const res = await fetch(`${WORKER_URL}/proxy/ai/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'sonar',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: context + '\n\nBRUGERENS SPØRGSMÅL: ' + prompt }
+        ],
+        temperature: 0.3,
+        max_tokens: 1500,
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content || 'Kunne ikke generere svar.';
+      aiMessages.push({ role: 'assistant', content: reply });
+    } else {
+      // Fallback: local analysis if API fails
+      aiMessages.push({ role: 'assistant', content: generateLocalAnalysis(prompt) });
+    }
+  } catch (e) {
+    console.warn('AI API fejl:', e);
+    aiMessages.push({ role: 'assistant', content: generateLocalAnalysis(prompt) });
+  }
+
+  aiLoading = false;
+  renderAiMessages();
+}
+
+function generateLocalAnalysis(prompt) {
+  // Offline fallback — basic analysis from local data
+  const assets = loadData(STORAGE_KEYS.assets);
+  const liabilities = loadData(STORAGE_KEYS.liabilities);
+  const transactions = loadData(STORAGE_KEYS.transactions);
+  const spvs = loadData(STORAGE_KEYS.spv);
+
+  const totalAssets = assets.reduce((s, a) => s + (parseFloat(a.value) || 0), 0);
+  const totalLiabilities = liabilities.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
+  const totalSpv = spvs.reduce((s, x) => s + (parseFloat(x.currentValue) || 0), 0);
+  const netWorth = totalAssets + totalSpv - totalLiabilities;
+
+  const now = new Date();
+  const thisMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  const monthlyExpense = transactions.filter(t => t.date && t.date.startsWith(thisMonth) && parseFloat(t.amount) < 0).reduce((s,t) => s + Math.abs(parseFloat(t.amount)), 0);
+  const monthlyIncome = transactions.filter(t => t.date && t.date.startsWith(thisMonth) && parseFloat(t.amount) >= 0).reduce((s,t) => s + parseFloat(t.amount), 0);
+
+  return `**Hurtig analyse (offline-tilstand)**
+
+Her er et overblik baseret på dine data:
+
+- **Net Worth**: ${fmtCurrency(netWorth)} (aktiver: ${fmtCurrency(totalAssets)}, gæld: ${fmtCurrency(totalLiabilities)}, SPV: ${fmtCurrency(totalSpv)})
+- **Denne måned**: Indtægt ${fmtCurrency(monthlyIncome)}, udgifter ${fmtCurrency(monthlyExpense)}
+- **Opsparingsrate**: ${monthlyIncome > 0 ? fmtPercent((monthlyIncome - monthlyExpense) / monthlyIncome * 100) : '—'}
+- **SPV-portefølje**: ${spvs.length} investeringer, samlet værdi ${fmtCurrency(totalSpv)}
+
+*For dybere analyse med AI-anbefalinger, tjek at du har internetforbindelse.*`;
+}
+
+function renderAiMessages() {
+  const container = document.getElementById('aiMessages');
+  if (!container) return;
+
+  let html = aiMessages.map(m => {
+    const cls = m.role === 'user' ? 'user' : 'assistant';
+    let content = m.content;
+    // Simple markdown rendering
+    if (m.role === 'assistant') {
+      content = content
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n- /g, '<br>• ')
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/\n/g, '<br>');
+    }
+    return `<div class="ai-msg ${cls}">${content}</div>`;
+  }).join('');
+
+  if (aiLoading) {
+    html += `<div class="ai-loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span>Analyserer dine data...</span></div>`;
+  }
+
+  container.innerHTML = html;
+  container.scrollTop = container.scrollHeight;
+}
+
+function clearAiChat() {
+  aiMessages = [];
+  renderAiMessages();
 }
 
 // ============ INIT ============
