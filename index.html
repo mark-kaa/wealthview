@@ -1115,35 +1115,39 @@ const SPV_STATUSES = { aktiv: 'Aktiv', exit: 'Exit', nedskrevet: 'Nedskrevet' };
 
 const CATEGORY_RULES = [
   // Løn / Indtægt
-  { pattern: /l\u00f8n|salary|wage|payroll|betaling fra/i, category: 'L\u00f8n' },
+  { pattern: /l\u00f8n|salary|wage|payroll|betaling fra|dagpenge|barselsdagpenge|a-kasse|kontanthj\u00e6lp|su\b|indkomst|honorar/i, category: 'Indt\u00e6gt' },
   // Bolig
-  { pattern: /husleje|bolig|ejendom|m\u00f8belkompagniet|\bilva\b|ikea|jysk|homely/i, category: 'Bolig' },
-  // Mad & Dagligvarer — supermarkeder, b\u00f8rnl\u00f8s, delikatesser
-  { pattern: /netto|rema|f\u00f8tex|coop|daglig|\birma\b|aldi|lidl|bilka|meny|\bspar\b|7-eleven|7eleven|365discount|brugsen|kvickly|fakta|emmerys|lagkagehuset|meyers|\bbodenhoff\b|kcal|matraws|fresh out the oven|netto markt|dao\b/i, category: 'Mad & Dagligvarer' },
+  { pattern: /husleje|bolig|ejendom|m\u00f8belkompagniet|\bilva\b|ikea|jysk|homely|tapetnedrivning|maler|vvs|el-install|h\u00e5ndv\u00e6rker|byggemarket|\bjem\b.*fix|bauhaus|silvan|harald nyborg/i, category: 'Bolig' },
+  // Mad & Dagligvarer
+  { pattern: /netto|rema|f\u00f8tex|coop|daglig|\birma\b|aldi|lidl|bilka|meny|\bspar\b|7-eleven|7eleven|365discount|brugsen|kvickly|fakta|emmerys|lagkagehuset|meyers|\bbodenhoff\b|kcal|matraws|fresh out the oven|netto markt|\bdao\b|s\u00f8strene grene|indkøb|\bgrene\b/i, category: 'Mad & Dagligvarer' },
   // Caf\u00e9 & Kaffe
   { pattern: /coffee|kaffe|espresso house|joe.*juice|la cabra|starbucks|baresso|\bcafee?\b|original coffee|goldfinch|april coffee/i, category: 'Caf\u00e9 & Kaffe' },
   // Transport
-  { pattern: /dsb|rejsekort|metro|benzin|parkering|uber|bolt|taxa|q8|circle|shell|easypark|ok tank|f24|uno-x|gls|general logistics|postnord|dao(?!$)/i, category: 'Transport' },
+  { pattern: /dsb|rejsekort|metro|benzin|parkering|uber|bolt|taxa|q8|circle|shell|easypark|ok tank|f24|uno-x|gls|general logistics|postnord|tesla|spirii|clever|e\.on|ladestation|\bel-\b.*bil/i, category: 'Transport' },
   // Underholdning
-  { pattern: /spotify|netflix|biograf|disney|hbo|viaplay|youtube|playstation|blizzard|xbox|steam|twitch|ticketmaster|billetto|bella center|boerneboblen/i, category: 'Underholdning' },
-  // Shopping — fysisk + online
-  { pattern: /zalando|\bhm\b|h&m|amazon|asos|matas|magasin|elgiganten|\billum\b|power\b|proshop|vinted|fruugo|schibsted|\bdba\b|quickpoint|pinploy|cards kbh|letsgradecards|wwwkelz0r/i, category: 'Shopping' },
+  { pattern: /spotify|netflix|biograf|disney|hbo|viaplay|youtube|playstation|blizzard|xbox|steam|twitch|ticketmaster|billetto|bella center|boerneboblen|dr koncerthuset|koncert|teater|kino|bellagroup/i, category: 'Underholdning' },
+  // Shopping
+  { pattern: /zalando|\bhm\b|h&m|amazon|asos|matas|magasin|elgiganten|\billum\b|power\b|proshop|vinted|fruugo|schibsted|\bdba\b|quickpoint|pinploy|cards kbh|letsgradecards|wwwkelz0r|kortboksen|cardtwin|brickeconomy|king of breaks|amazing space|j\u00e6gger|jagger|s\u00f8strene/i, category: 'Shopping' },
   // Sundhed
-  { pattern: /apotek|l\u00e6ge|tandl\u00e6ge|fitness|gym|pulsure|andcards abk/i, category: 'Sundhed' },
-  // Forsikring
-  { pattern: /forsikring|tryg|topdanmark|alm\.brand|gjensidige|\bif\b forsikring/i, category: 'Forsikring' },
+  { pattern: /apotek|l\u00e6ge|tandl\u00e6ge|tandskade|fitness|gym|pulsure|andcards abk|\btand\b|fysioterapi|kiropraktor|psykolog/i, category: 'Sundhed' },
+  // Forsikring & Pension
+  { pattern: /forsikring|tryg|topdanmark|alm\.brand|gjensidige|\bif\b forsikring|velliv|\bpfa\b|\bap\b pension|danica|pension/i, category: 'Forsikring' },
   // Abonnementer & Software
-  { pattern: /abonnement|mobil|internet|telia|telmore|yousee|apple\.com|\bapple\b|perplexity|lovable|coinbase|icloud|chatgpt|openai|notion|figma|github/i, category: 'Abonnementer' },
+  { pattern: /abonnement|mobil|internet|telia|telmore|yousee|apple\.com|\bapple\b|perplexity|lovable|icloud|chatgpt|openai|notion|figma|github|rapidapi|supabase|cloudflare|resend|base44|anthropic|simply\.com|vercel|netlify|heroku|aws|azure|google cloud|starlink|orderyoyo/i, category: 'Abonnementer' },
   // Rejser
-  { pattern: /fly|hotel|airbnb|booking|rejse|sas|ryanair|momondo|norwegian|easyjet|sp aioss/i, category: 'Rejser' },
+  { pattern: /fly|hotel|airbnb|booking|rejse|sas|ryanair|momondo|norwegian|easyjet|sp aioss|generator hostel|hostel|vandrehjem/i, category: 'Rejser' },
   // Takeaway / Restauranter
-  { pattern: /wolt|just eat|hungry|deliveroo|takeaway|little house|restaurant|madklub/i, category: 'Takeaway' },
+  { pattern: /wolt|just eat|hungry|deliveroo|takeaway|little house|restaurant|madklub|street meals|orderyoyo/i, category: 'Takeaway' },
   // Overf\u00f8rsler (MobilePay, Revolut)
   { pattern: /mob\.pay|mobilepay|overf\u00f8rsel|vekslet til/i, category: 'Overf\u00f8rsel' },
   // Investering
-  { pattern: /coinbase|\bsaxo\b|nordnet|\btrade\b|etoro|crypto|aktie/i, category: 'Investering' },
+  { pattern: /coinbase|\bsaxo\b|nordnet|\btrade\b|etoro|crypto|aktie|\bfund\b|aktiespar/i, category: 'Investering' },
   // Skat
   { pattern: /\bskat\b|skattestyrelsen|restskat|forskudsskat|b-skat|ejendomsskat|\bmoms\b|afgift/i, category: 'Skat' },
+  // B\u00f8rn
+  { pattern: /b\u00f8rneboblen|leget\u00f8j|b\u00f8rnet\u00f8j|br\b.*leg|fætter br/i, category: 'Shopping' },
+  // Energi
+  { pattern: /stella energy|\bel\b.*regning|varme|fjernvarme|naturgas|ewii|\bnrgi\b|andel energi/i, category: 'Bolig' },
 ];
 
 // Revolut Type-kolonne → fallback-kategori (bruges når desc ikke matcher)
