@@ -724,8 +724,8 @@ textarea.form-input { resize: vertical; min-height: 60px; }
     <div class="modal-body">
       <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Understøtter Revolut og Ringkjøbing Landbobank. Banken detekteres automatisk.</p>
       <div class="form-group">
-        <label class="form-label">Fil (CSV / Excel)</label>
-        <input type="file" class="form-input" id="csvFile" accept=".csv,.xlsx,.xls">
+        <label class="form-label">Filer (CSV / Excel — vælg flere ad gangen)</label>
+        <input type="file" class="form-input" id="csvFile" accept=".csv,.xlsx,.xls" multiple>
       </div>
       <div class="form-group">
         <label class="form-label">Kontotype</label>
@@ -1642,46 +1642,48 @@ function initAccountSelect() {
 
 function processCSV() {
   const fileInput = document.getElementById('csvFile');
-  if (!fileInput.files || !fileInput.files[0]) return;
-  const file = fileInput.files[0];
+  if (!fileInput.files || fileInput.files.length === 0) return;
   const accountType = document.getElementById('csvAccountType').value;
+  const files = Array.from(fileInput.files);
+  let processed = 0;
 
-  // Læs filen med auto-detect (prøv både komma og semikolon)
-  readFileAsRows(file, { trySemicolon: true }, function(rows) {
-    if (!rows || rows.length === 0) return;
+  files.forEach(file => {
+    readFileAsRows(file, { trySemicolon: true }, function(rows) {
+      if (rows && rows.length > 0) {
+        const cols = Object.keys(rows[0]).map(c => c.toLowerCase());
+        const detected = detectBankFormat(cols);
+        const accountId = ensureAccount(detected.bank, detected.currency);
 
-    // Auto-detect bank ud fra kolonnenavne
-    const cols = Object.keys(rows[0]).map(c => c.toLowerCase());
-    const detected = detectBankFormat(cols);
+        const newTxs = [];
+        rows.forEach(row => {
+          let tx = null;
+          if (detected.bank === 'revolut') {
+            tx = parseRevolutRow(row, accountId);
+          } else if (detected.bank === 'ringkjobing') {
+            tx = parseRingkjobingRow(row, accountId);
+          } else {
+            tx = parseGenericRow(row, accountId);
+          }
+          if (tx) {
+            tx.accountType = accountType;
+            newTxs.push(tx);
+          }
+        });
 
-    // Auto-find eller opret konto
-    const accountId = ensureAccount(detected.bank, detected.currency);
-
-    let transactions = loadData(STORAGE_KEYS.transactions);
-    const newTxs = [];
-    rows.forEach(row => {
-      let tx = null;
-      if (detected.bank === 'revolut') {
-        tx = parseRevolutRow(row, accountId);
-      } else if (detected.bank === 'ringkjobing') {
-        tx = parseRingkjobingRow(row, accountId);
-      } else {
-        tx = parseGenericRow(row, accountId);
+        let transactions = loadData(STORAGE_KEYS.transactions);
+        const merged = deduplicateTransactions(transactions, newTxs);
+        saveData(STORAGE_KEYS.transactions, merged);
       }
-      if (tx) {
-        tx.accountType = accountType;
-        newTxs.push(tx);
+
+      processed++;
+      if (processed === files.length) {
+        closeModal('csvUploadModal');
+        fileInput.value = '';
+        document.getElementById('csvPreview').style.display = 'none';
+        renderTransactions();
+        renderMonthlyChart();
       }
     });
-
-    // Deduplikering
-    const merged = deduplicateTransactions(transactions, newTxs);
-    saveData(STORAGE_KEYS.transactions, merged);
-    closeModal('csvUploadModal');
-    fileInput.value = '';
-    document.getElementById('csvPreview').style.display = 'none';
-    renderTransactions();
-    renderMonthlyChart();
   });
 }
 
