@@ -727,6 +727,18 @@ textarea.form-input { resize: vertical; min-height: 60px; }
         <label class="form-label">Fil (CSV / Excel)</label>
         <input type="file" class="form-input" id="csvFile" accept=".csv,.xlsx,.xls">
       </div>
+      <div class="form-group">
+        <label class="form-label">Kontotype</label>
+        <select class="form-select" id="csvAccountType">
+          <option value="privat">Privatforbrug</option>
+          <option value="faelles">Fællesforbrug</option>
+          <option value="faelles_opsparing">Fællesopsparing</option>
+          <option value="barn">Barnets konto</option>
+          <option value="opsparing">Opsparing</option>
+          <option value="investering">Investering</option>
+          <option value="andet">Andet</option>
+        </select>
+      </div>
       <div id="csvPreview" style="display:none;margin-top:12px">
         <div class="form-label" id="csvPreviewLabel"></div>
       </div>
@@ -1626,6 +1638,7 @@ function processCSV() {
   const fileInput = document.getElementById('csvFile');
   if (!fileInput.files || !fileInput.files[0]) return;
   const file = fileInput.files[0];
+  const accountType = document.getElementById('csvAccountType').value;
 
   // Læs filen med auto-detect (prøv både komma og semikolon)
   readFileAsRows(file, { trySemicolon: true }, function(rows) {
@@ -1647,10 +1660,12 @@ function processCSV() {
       } else if (detected.bank === 'ringkjobing') {
         tx = parseRingkjobingRow(row, accountId);
       } else {
-        // Ukendt format — forsøg generisk parsing
         tx = parseGenericRow(row, accountId);
       }
-      if (tx) newTxs.push(tx);
+      if (tx) {
+        tx.accountType = accountType;
+        newTxs.push(tx);
+      }
     });
 
     // Deduplikering
