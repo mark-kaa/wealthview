@@ -532,10 +532,16 @@ textarea.form-input { resize: vertical; min-height: 60px; }
     <section class="page" id="page-transactions">
       <div class="flex-between mb-16">
         <h1 class="page-title" style="margin-bottom:0">Transaktioner</h1>
-        <button class="btn btn-primary" onclick="openModal('csvUploadModal')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Upload CSV / Excel
-        </button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary btn-sm" onclick="clearAllTransactions()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Slet alle
+          </button>
+          <button class="btn btn-primary" onclick="openModal('csvUploadModal')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload CSV / Excel
+          </button>
+        </div>
       </div>
       <div class="card mb-16">
         <div class="card-title">Månedlig Oversigt</div>
@@ -1503,6 +1509,16 @@ function deleteTx(id) {
   });
 }
 
+function clearAllTransactions() {
+  const transactions = loadData(STORAGE_KEYS.transactions);
+  if (transactions.length === 0) return;
+  showDeleteConfirm(`Slet alle ${transactions.length} transaktioner? Du kan uploade igen bagefter.`, () => {
+    saveData(STORAGE_KEYS.transactions, []);
+    renderTransactions();
+    renderMonthlyChart();
+  });
+}
+
 function renderMonthlyChart() {
   destroyChart('monthly');
   const transactions = loadData(STORAGE_KEYS.transactions);
@@ -1624,8 +1640,8 @@ function processCSV() {
   const csvOpts = { delimiter: bank === 'ringkjobing' ? ';' : undefined };
 
   readFileAsRows(file, csvOpts, function(rows) {
-    const transactions = loadData(STORAGE_KEYS.transactions);
-    let count = 0;
+    let transactions = loadData(STORAGE_KEYS.transactions);
+    const newTxs = [];
     rows.forEach(row => {
       let tx = null;
       if (bank === 'revolut') {
@@ -1633,16 +1649,31 @@ function processCSV() {
       } else if (bank === 'ringkjobing') {
         tx = parseRingkjobingRow(row, accountId);
       }
-      if (tx) { transactions.push(tx); count++; }
+      if (tx) newTxs.push(tx);
     });
 
-    saveData(STORAGE_KEYS.transactions, transactions);
+    // Deduplikering: fjern eksisterende der matcher på dato+beskrivelse+beløb+kilde
+    const merged = deduplicateTransactions(transactions, newTxs);
+    saveData(STORAGE_KEYS.transactions, merged);
     closeModal('csvUploadModal');
     fileInput.value = '';
     document.getElementById('csvPreview').style.display = 'none';
     renderTransactions();
     renderMonthlyChart();
   });
+}
+
+// Deduplikering: nye transaktioner overskriver eksisterende dubletter
+function deduplicateTransactions(existing, incoming) {
+  // Byg et fingerprint for hver transaktion: dato + beløb + beskrivelse + kilde
+  function fingerprint(tx) {
+    return `${tx.date}|${tx.amount}|${(tx.description || '').toLowerCase().trim()}|${tx.source || ''}`;
+  }
+  // Fjern fra existing alt der matcher en incoming fingerprint
+  const incomingPrints = new Set(incoming.map(fingerprint));
+  const kept = existing.filter(tx => !incomingPrints.has(fingerprint(tx)));
+  // Tilføj alle incoming
+  return [...kept, ...incoming];
 }
 
 function parseRevolutRow(row, accountId) {
