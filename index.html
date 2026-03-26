@@ -1098,7 +1098,7 @@ function genId() {
 }
 
 // ============ CATEGORIES ============
-const TX_CATEGORIES = ['Bolig','Mad & Dagligvarer','Café & Kaffe','Takeaway','Transport','Underholdning','Shopping','Sundhed','Forsikring','Abonnementer','Rejser','Uddannelse','Investering','Overførsel','Refundering','Løn','Indtægt','Andet'];
+const TX_CATEGORIES = ['Bolig','Mad & Dagligvarer','Café & Kaffe','Takeaway','Transport','Underholdning','Shopping','Sundhed','Forsikring','Abonnementer','Rejser','Uddannelse','Investering','Overførsel','Refundering','Skat','Løn','Indtægt','Andet'];
 const ASSET_CATEGORIES = {property:'Ejendomme',stocks:'Aktier & ETF',crypto:'Crypto',collectibles:'Samleobjekter',startup:'Startup Investeringer',pension:'Pension',cash:'Kontanter',other:'Andet'};
 const LIABILITY_CATEGORIES = {mortgage:'Realkreditlån',loan:'Lån',credit:'Kredit',other:'Andet'};
 
@@ -1142,6 +1142,8 @@ const CATEGORY_RULES = [
   { pattern: /mob\.pay|mobilepay|overf\u00f8rsel|vekslet til/i, category: 'Overf\u00f8rsel' },
   // Investering
   { pattern: /coinbase|\bsaxo\b|nordnet|\btrade\b|etoro|crypto|aktie/i, category: 'Investering' },
+  // Skat
+  { pattern: /\bskat\b|skattestyrelsen|restskat|forskudsskat|b-skat|ejendomsskat|\bmoms\b|afgift/i, category: 'Skat' },
 ];
 
 // Revolut Type-kolonne → fallback-kategori (bruges når desc ikke matcher)
