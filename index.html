@@ -532,10 +532,18 @@ textarea.form-input { resize: vertical; min-height: 60px; }
     <section class="page" id="page-transactions">
       <div class="flex-between mb-16">
         <h1 class="page-title" style="margin-bottom:0">Transaktioner</h1>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-secondary btn-sm" onclick="clearAllTransactions()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             Slet alle
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="recategorizeAll()" id="btnRecategorize">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Re-kategorisér
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="aiCategorizeOther()" id="btnAiCategorize">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            AI-kategorisér
           </button>
           <button class="btn btn-primary" onclick="openModal('csvUploadModal')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -1143,7 +1151,7 @@ const CATEGORY_RULES = [
   // Investering
   { pattern: /coinbase|\bsaxo\b|nordnet|\btrade\b|etoro|crypto|aktie|\bfund\b|aktiespar/i, category: 'Investering' },
   // Skat
-  { pattern: /\bskat\b|skattestyrelsen|restskat|forskudsskat|b-skat|ejendomsskat|\bmoms\b|afgift/i, category: 'Skat' },
+  { pattern: /\bskat\b|skattestyrelsen|restskat|forskudsskat|b-skat|ejendomsskat|\bmoms\b|afgift|frivillig ind|aconto skat|selskabsskat|udbytteskat|kildeskat/i, category: 'Skat' },
   // B\u00f8rn
   { pattern: /b\u00f8rneboblen|leget\u00f8j|b\u00f8rnet\u00f8j|br\b.*leg|fætter br/i, category: 'Shopping' },
   // Energi
@@ -1552,6 +1560,112 @@ function clearAllTransactions() {
     renderTransactions();
     renderMonthlyChart();
   });
+}
+
+// Re-kategorisér: kør autoCategory på alle transaktioner med de nyeste regler
+function recategorizeAll() {
+  const transactions = loadData(STORAGE_KEYS.transactions);
+  if (transactions.length === 0) return;
+  let changed = 0;
+  transactions.forEach(t => {
+    const newCat = autoCategory(t.description, t.source === 'revolut' ? (t._rowType || '') : '');
+    if (newCat !== 'Andet' && t.category !== newCat) {
+      t.category = newCat;
+      changed++;
+    }
+  });
+  saveData(STORAGE_KEYS.transactions, transactions);
+  renderTransactions();
+  renderMonthlyChart();
+  const btn = document.getElementById('btnRecategorize');
+  const orig = btn.innerHTML;
+  btn.innerHTML = `✓ ${changed} opdateret`;
+  setTimeout(() => { btn.innerHTML = orig; }, 2000);
+}
+
+// AI-kategorisering: send "Andet"-transaktioner til Perplexity for klassificering
+async function aiCategorizeOther() {
+  const transactions = loadData(STORAGE_KEYS.transactions);
+  const others = transactions.filter(t => t.category === 'Andet');
+  if (others.length === 0) {
+    const btn = document.getElementById('btnAiCategorize');
+    btn.innerHTML = '✓ Ingen "Andet"';
+    setTimeout(() => location.reload(), 1500);
+    return;
+  }
+
+  const btn = document.getElementById('btnAiCategorize');
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Analyserer...';
+
+  // Send unikke beskrivelser i batch
+  const uniqueDescs = [...new Set(others.map(t => t.description).filter(Boolean))];
+  const categories = TX_CATEGORIES.filter(c => c !== 'Andet').join(', ');
+
+  // Batch i grupper på max 40 for at holde prompt-længden nede
+  const batches = [];
+  for (let i = 0; i < uniqueDescs.length; i += 40) {
+    batches.push(uniqueDescs.slice(i, i + 40));
+  }
+
+  const mapping = {};
+  for (const batch of batches) {
+    try {
+      const prompt = `Klassificér følgende banktransaktioner i én af disse kategorier:\n${categories}\n\nReturner KUN et JSON-objekt hvor nøglen er beskrivelsen og værdien er kategorien. Ingen forklaring.\n\nTransaktioner:\n${batch.map((d, i) => `${i + 1}. ${d}`).join('\n')}`;
+
+      const res = await fetch(`${WORKER_URL}/proxy/ai/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'sonar',
+          messages: [
+            { role: 'system', content: 'Du er en dansk økonomi-kategoriserings-assistent. Returner KUN et JSON-objekt. Ingen markdown, ingen forklaring.' },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.1,
+          max_tokens: 2000,
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        let reply = data.choices?.[0]?.message?.content || '';
+        // Ekstraher JSON fra svar (fjern evt. markdown code blocks)
+        reply = reply.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        try {
+          const parsed = JSON.parse(reply);
+          Object.assign(mapping, parsed);
+        } catch (e) {
+          console.warn('AI-svar kunne ikke parses:', reply);
+        }
+      }
+    } catch (e) {
+      console.warn('AI-kategorisering fejl:', e);
+    }
+  }
+
+  // Anvend mapping på transaktioner
+  let changed = 0;
+  const validCats = new Set(TX_CATEGORIES);
+  transactions.forEach(t => {
+    if (t.category === 'Andet' && t.description && mapping[t.description]) {
+      const newCat = mapping[t.description];
+      if (validCats.has(newCat)) {
+        t.category = newCat;
+        changed++;
+      }
+    }
+  });
+
+  saveData(STORAGE_KEYS.transactions, transactions);
+  renderTransactions();
+  renderMonthlyChart();
+
+  btn.disabled = false;
+  btn.innerHTML = `✓ ${changed} kategoriseret`;
+  setTimeout(() => {
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg> AI-kategorisér';
+  }, 3000);
 }
 
 function renderMonthlyChart() {
