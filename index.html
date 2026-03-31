@@ -567,7 +567,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Dato</th><th>Beskrivelse</th><th>Kategori</th><th>Kontotype</th><th style="text-align:right">Beløb</th><th style="width:40px"></th></tr></thead>
+            <thead><tr><th style="cursor:pointer" onclick="toggleTxSort('date')">Dato <span id="sortIcon_date"></span></th><th style="cursor:pointer" onclick="toggleTxSort('description')">Beskrivelse <span id="sortIcon_description"></span></th><th>Kategori</th><th>Kontotype</th><th style="text-align:right;cursor:pointer" onclick="toggleTxSort('amount')">Beløb <span id="sortIcon_amount"></span></th><th style="width:40px"></th></tr></thead>
             <tbody id="txTableBody"></tbody>
           </table>
         </div>
@@ -1430,6 +1430,19 @@ function saveSnapshot() {
 }
 
 // ============ TRANSACTIONS ============
+let txSortField = 'date';
+let txSortDir = 'desc'; // 'asc' or 'desc'
+
+function toggleTxSort(field) {
+  if (txSortField === field) {
+    txSortDir = txSortDir === 'desc' ? 'asc' : 'desc';
+  } else {
+    txSortField = field;
+    txSortDir = field === 'amount' ? 'desc' : 'asc';
+  }
+  renderTransactions();
+}
+
 function renderTransactions() {
   const transactions = loadData(STORAGE_KEYS.transactions);
   const search = (document.getElementById('txSearch').value || '').toLowerCase();
@@ -1442,7 +1455,21 @@ function renderTransactions() {
   if (catFilter) filtered = filtered.filter(t => t.category === catFilter);
   if (acctTypeFilter) filtered = filtered.filter(t => (t.accountType || 'andet') === acctTypeFilter);
   if (activeAccountType) filtered = filtered.filter(t => (t.accountType || 'andet') === activeAccountType);
-  filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  // Sortering
+  filtered.sort((a, b) => {
+    let cmp = 0;
+    if (txSortField === 'date') cmp = new Date(a.date) - new Date(b.date);
+    else if (txSortField === 'description') cmp = (a.description || '').localeCompare(b.description || '', 'da');
+    else if (txSortField === 'amount') cmp = (parseFloat(a.amount) || 0) - (parseFloat(b.amount) || 0);
+    return txSortDir === 'desc' ? -cmp : cmp;
+  });
+
+  // Opdater sort-ikoner
+  ['date','description','amount'].forEach(f => {
+    const el = document.getElementById('sortIcon_' + f);
+    if (el) el.textContent = txSortField === f ? (txSortDir === 'asc' ? '▲' : '▼') : '';
+  });
   
   // Render account split
   renderAccountSplit();
@@ -2288,7 +2315,7 @@ function saveCompany() {
     id: editId || genId(),
     name: document.getElementById('companyName').value.trim(),
     cvr: document.getElementById('companyCvr').value.trim().replace(/[^0-9]/g, ''),
-    ownership: parseFloat(document.getElementById('companyOwnership').value) || 0,
+    ownership: document.getElementById('companyOwnership').value.trim() !== '' ? parseFloat(document.getElementById('companyOwnership').value) : 100,
   };
   if (!obj.name) return;
   
@@ -2621,6 +2648,9 @@ function esc(str) {
 // ============ ACCOUNT TYPES / SPENDING SPLIT ============
 let activeAccountType = '';
 
+// Kategorier der IKKE er reelt forbrug — ekskluderes fra forbrugs-KPI
+const NON_SPENDING_CATEGORIES = ['Skat','Overførsel','Investering','Løn','Indtægt','Refundering'];
+
 function renderAccountSplit() {
   const transactions = loadData(STORAGE_KEYS.transactions);
   const kpiGrid = document.getElementById('accountKpiGrid');
@@ -2628,30 +2658,33 @@ function renderAccountSplit() {
   const tabs = document.getElementById('accountTabs');
   if (!kpiGrid) return;
 
-  // Group by accountType
-  const totals = {};
+  // Kun reelt forbrug (udgifter ekskl. skat, overførsler, investering osv.)
+  const spendingTotals = {};
   const colors = { privat: '#20808D', faelles: '#A84B2F', faelles_opsparing: '#4db88b', barn: '#FFC553', opsparing: '#BCE2E7', investering: '#944454', andet: '#848456' };
   let grandTotal = 0;
 
   transactions.forEach(t => {
+    const amt = parseFloat(t.amount) || 0;
+    if (amt >= 0) return; // Kun udgifter
+    if (NON_SPENDING_CATEGORIES.includes(t.category)) return; // Ekskluder ikke-forbrug
     const type = t.accountType || 'andet';
-    const amt = Math.abs(parseFloat(t.amount) || 0);
-    totals[type] = (totals[type] || 0) + amt;
-    grandTotal += amt;
+    const absAmt = Math.abs(amt);
+    spendingTotals[type] = (spendingTotals[type] || 0) + absAmt;
+    grandTotal += absAmt;
   });
 
-  // KPI cards
-  kpiGrid.innerHTML = Object.entries(ACCOUNT_TYPES).filter(([k]) => totals[k] > 0).map(([key, label]) => `
+  // KPI cards — viser reelt forbrug per kontotype
+  kpiGrid.innerHTML = Object.entries(ACCOUNT_TYPES).filter(([k]) => spendingTotals[k] > 0).map(([key, label]) => `
     <div class="account-kpi" style="border-left:3px solid ${colors[key] || 'var(--border)'}">
-      <div class="label">${label}</div>
-      <div class="value">${fmtCurrency(totals[key] || 0)}</div>
+      <div class="label">${label} (forbrug)</div>
+      <div class="value">${fmtCurrency(spendingTotals[key] || 0)}</div>
     </div>
   `).join('');
 
   // Bar chart
   if (grandTotal > 0) {
-    bar.innerHTML = Object.entries(ACCOUNT_TYPES).filter(([k]) => totals[k] > 0).map(([key]) => {
-      const pct = ((totals[key] || 0) / grandTotal * 100).toFixed(1);
+    bar.innerHTML = Object.entries(ACCOUNT_TYPES).filter(([k]) => spendingTotals[k] > 0).map(([key]) => {
+      const pct = ((spendingTotals[key] || 0) / grandTotal * 100).toFixed(1);
       return `<div class="account-bar-segment" style="width:${pct}%;background:${colors[key]}" title="${ACCOUNT_TYPES[key]}: ${pct}%"></div>`;
     }).join('');
   } else {
