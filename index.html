@@ -26,6 +26,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs" type="module"></script>
 <style>
 /* ============ RESET & VARIABLES ============ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -438,6 +439,64 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 .ai-quick-btn:hover { background: var(--surface-hover); color: var(--text); border-color: var(--primary); }
 .ai-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
 @media (max-width: 768px) { .ai-summary-grid { grid-template-columns: 1fr; } }
+
+/* ============ WARREN AI ============ */
+.warren-container { display: flex; flex-direction: column; height: calc(100vh - 180px); min-height: 400px; }
+.warren-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.warren-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #20808D, #1a6570); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 16px; flex-shrink: 0; }
+.warren-name { font-size: 16px; font-weight: 600; }
+.warren-subtitle { font-size: 11px; color: var(--text-muted); }
+.warren-docs { margin-bottom: 12px; }
+.warren-doc-list { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.warren-doc-chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  font-size: 11px; color: var(--text-muted);
+}
+.warren-doc-chip .remove { cursor: pointer; opacity: 0.5; font-size: 14px; }
+.warren-doc-chip .remove:hover { opacity: 1; color: var(--danger); }
+.warren-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 12px 0; }
+.warren-msg {
+  padding: 12px 16px; border-radius: 12px; font-size: 13px; line-height: 1.6;
+  max-width: 85%; word-wrap: break-word;
+}
+.warren-msg.user {
+  background: var(--primary-subtle); align-self: flex-end; border: 1px solid hsla(175,60%,38%,0.2);
+}
+.warren-msg.assistant {
+  background: var(--surface); border: 1px solid var(--border); align-self: flex-start;
+}
+.warren-msg.assistant ul { margin: 6px 0; padding-left: 16px; }
+.warren-msg.assistant li { margin-bottom: 3px; }
+.warren-msg.assistant strong { color: var(--text); }
+.warren-msg.assistant h3, .warren-msg.assistant h4 { margin: 10px 0 4px; font-size: 13px; }
+.warren-msg.system {
+  background: transparent; align-self: center; color: var(--text-muted); font-size: 11px;
+  font-style: italic; max-width: 100%; padding: 4px 0;
+}
+.warren-input-area {
+  display: flex; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border);
+  align-items: flex-end;
+}
+.warren-input-area input { flex: 1; }
+.warren-upload-btn {
+  padding: 8px; border-radius: var(--radius-sm); background: var(--surface);
+  border: 1px solid var(--border); cursor: pointer; color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+}
+.warren-upload-btn:hover { background: var(--surface-hover); color: var(--text); border-color: var(--primary); }
+.warren-typing { display: flex; align-items: center; gap: 8px; padding: 12px 16px; color: var(--text-muted); font-size: 12px; }
+.warren-typing .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--primary); animation: aiPulse 1.2s ease-in-out infinite; }
+.warren-typing .dot:nth-child(2) { animation-delay: 0.2s; }
+.warren-typing .dot:nth-child(3) { animation-delay: 0.4s; }
+.warren-quick-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.warren-quick-btn {
+  padding: 6px 12px; border-radius: 16px; font-size: 11px; font-weight: 500;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text-muted);
+  cursor: pointer; transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+}
+.warren-quick-btn:hover { background: var(--surface-hover); color: var(--text); border-color: var(--primary); }
 </style>
 </head>
 <body>
@@ -481,9 +540,9 @@ textarea.form-input { resize: vertical; min-height: 60px; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
         <span>Marked</span>
       </div>
-      <div class="nav-item" data-page="ai" onclick="navigate('ai')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-        <span>AI Analyse</span>
+      <div class="nav-item" data-page="warren" onclick="navigate('warren')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>Warren</span>
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -686,37 +745,53 @@ textarea.form-input { resize: vertical; min-height: 60px; }
     </section>
 
 
-    <!-- ====== AI ANALYSE PAGE ====== -->
-    <section class="page" id="page-ai">
-      <div class="flex-between mb-16">
-        <h1 class="page-title" style="margin-bottom:0">AI Analyse</h1>
-        <button class="btn btn-secondary btn-sm" onclick="clearAiChat()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          Ryd samtale
-        </button>
-      </div>
-      <div class="ai-summary-grid" id="aiSummaryGrid"></div>
-      <div class="card">
-        <div class="card-title">Spørg din AI-rådgiver</div>
-        <div class="ai-quick-actions">
-          <button class="ai-quick-btn" onclick="askAi('Giv mig et overblik over min økonomi og forslag til optimering')">Økonomisk overblik</button>
-          <button class="ai-quick-btn" onclick="askAi('Analyser mit forbrug og find besparelsesmuligheder')">Forbrugsanalyse</button>
-          <button class="ai-quick-btn" onclick="askAi('Vurder mine investeringer og kom med anbefalinger')">Investeringsrådgivning</button>
-          <button class="ai-quick-btn" onclick="askAi('Hvad er min opsparingsrate og hvordan kan jeg forbedre den?')">Opsparingsrate</button>
-          <button class="ai-quick-btn" onclick="askAi('Analyser mine SPV/startup-investeringer')">SPV-analyse</button>
-        </div>
-        <div class="ai-chat">
-          <div class="ai-prompt-area">
-            <input type="text" class="form-input" id="aiPrompt" placeholder="Spørg om din økonomi..." onkeydown="if(event.key==='Enter')sendAiPrompt()">
-            <button class="btn btn-primary" onclick="sendAiPrompt()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              Send
-            </button>
+    <!-- ====== WARREN AI PAGE ====== -->
+    <section class="page" id="page-warren">
+      <div class="warren-container">
+        <div class="warren-header">
+          <div class="warren-avatar">W</div>
+          <div>
+            <div class="warren-name">Warren</div>
+            <div class="warren-subtitle">Din personlige økonomiske rådgiver</div>
           </div>
-          <div class="ai-messages" id="aiMessages"></div>
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <button class="btn btn-secondary btn-sm" onclick="clearWarren()">Ny samtale</button>
+          </div>
+        </div>
+
+        <!-- Uploadede dokumenter -->
+        <div class="warren-docs" id="warrenDocs" style="display:none">
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px">Uploadede dokumenter</div>
+          <div class="warren-doc-list" id="warrenDocList"></div>
+        </div>
+
+        <!-- Quick actions (vises kun ved tom chat) -->
+        <div class="warren-quick-btns" id="warrenQuickBtns">
+          <button class="warren-quick-btn" onclick="askWarren('Giv mig et overblik over min økonomi')">Overblik</button>
+          <button class="warren-quick-btn" onclick="askWarren('Analyser mit forbrug og find besparelser')">Forbrugsanalyse</button>
+          <button class="warren-quick-btn" onclick="askWarren('Hvad er min opsparingsrate og hvordan forbedrer jeg den?')">Opsparingsrate</button>
+          <button class="warren-quick-btn" onclick="askWarren('Analyser mine SPV/startup-investeringer')">Investeringer</button>
+          <button class="warren-quick-btn" onclick="askWarren('Analyser mit skattetryk og fradragsmuligheder')">Skatteoptimering</button>
+          <button class="warren-quick-btn" onclick="askWarren('Vurder min selskabsstruktur via Sinius ApS')">Selskabsstruktur</button>
+        </div>
+
+        <!-- Messages -->
+        <div class="warren-messages" id="warrenMessages"></div>
+
+        <!-- Input area -->
+        <div class="warren-input-area">
+          <label class="warren-upload-btn" for="warrenFileInput" title="Upload dokument (PDF, Excel, billede)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          </label>
+          <input type="file" id="warrenFileInput" accept=".pdf,.xlsx,.xls,.csv,.png,.jpg,.jpeg,.txt" multiple style="display:none" onchange="handleWarrenFiles(this.files)">
+          <input type="text" class="form-input" id="warrenInput" placeholder="Spørg Warren om din økonomi..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendWarren()}">
+          <button class="btn btn-primary" onclick="sendWarren()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
         </div>
       </div>
     </section>
+
   </main>
 </div>
 
@@ -1268,7 +1343,7 @@ function renderCurrentPage() {
     case 'companies': renderCompanies(); break;
     case 'market': renderWatchlist(); break;
     case 'spv': renderSpv(); break;
-    case 'ai': renderAiPage(); break;
+    case 'warren': renderWarrenPage(); break;
   }
 }
 
@@ -2991,221 +3066,226 @@ function deleteSpv(id) {
   });
 }
 
-// ============ AI ANALYSE ============
-let aiMessages = [];
-let aiLoading = false;
+// ============ WARREN AI ASSISTANT ============
+let warrenMessages = [];
+let warrenDocuments = []; // [{name, content, type}]
+let warrenLoading = false;
 
-function renderAiPage() {
-  renderAiSummary();
-  renderAiMessages();
+function renderWarrenPage() {
+  renderWarrenMessages();
+  renderWarrenDocs();
+  // Hide quick buttons if there are messages
+  const quickBtns = document.getElementById('warrenQuickBtns');
+  if (quickBtns) quickBtns.style.display = warrenMessages.length > 0 ? 'none' : 'flex';
 }
 
-function renderAiSummary() {
-  const assets = loadData(STORAGE_KEYS.assets);
-  const liabilities = loadData(STORAGE_KEYS.liabilities);
-  const transactions = loadData(STORAGE_KEYS.transactions);
-  const spvs = loadData(STORAGE_KEYS.spv);
-
-  const totalAssets = assets.reduce((s, a) => s + (parseFloat(a.value) || 0), 0);
-  const totalLiabilities = liabilities.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
-  const totalSpv = spvs.reduce((s, x) => s + (parseFloat(x.currentValue) || 0), 0);
-  const netWorth = totalAssets + totalSpv - totalLiabilities;
-
-  const now = new Date();
-  const thisMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-  const monthlySpend = transactions
-    .filter(t => t.date && t.date.startsWith(thisMonth) && parseFloat(t.amount) < 0)
-    .reduce((s, t) => s + Math.abs(parseFloat(t.amount)), 0);
-  const monthlyIncome = transactions
-    .filter(t => t.date && t.date.startsWith(thisMonth) && parseFloat(t.amount) >= 0)
-    .reduce((s, t) => s + parseFloat(t.amount), 0);
-  const savingsRate = monthlyIncome > 0 ? ((monthlyIncome - monthlySpend) / monthlyIncome * 100) : 0;
-
-  const grid = document.getElementById('aiSummaryGrid');
-  grid.innerHTML = `
-    <div class="kpi-card"><div class="kpi-label">Net Worth (inkl. SPV)</div><div class="kpi-value">${fmtCurrency(netWorth)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Opsparingsrate (denne md.)</div><div class="kpi-value ${savingsRate >= 0 ? 'amount-positive' : 'amount-negative'}">${fmtPercent(savingsRate)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">SPV-portefølje</div><div class="kpi-value">${fmtCurrency(totalSpv)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Mdl. Forbrug</div><div class="kpi-value">${fmtCurrency(monthlySpend)}</div></div>
-  `;
-}
-
-function gatherFinancialContext() {
-  const assets = loadData(STORAGE_KEYS.assets);
-  const liabilities = loadData(STORAGE_KEYS.liabilities);
-  const transactions = loadData(STORAGE_KEYS.transactions);
-  const spvs = loadData(STORAGE_KEYS.spv);
-  const companies = loadData(STORAGE_KEYS.companies);
-
-  const totalAssets = assets.reduce((s, a) => s + (parseFloat(a.value) || 0), 0);
-  const totalLiabilities = liabilities.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
-  const totalSpvInvested = spvs.reduce((s, x) => s + (parseFloat(x.invested) || 0), 0);
-  const totalSpvCurrent = spvs.reduce((s, x) => s + (parseFloat(x.currentValue) || 0), 0);
-
-  // Monthly breakdown (last 6 months)
-  const now = new Date();
-  const months = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-    const monthTx = transactions.filter(t => t.date && t.date.startsWith(key));
-    const income = monthTx.filter(t => parseFloat(t.amount) >= 0).reduce((s, t) => s + parseFloat(t.amount), 0);
-    const expense = monthTx.filter(t => parseFloat(t.amount) < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount)), 0);
-    months.push({ month: key, income: Math.round(income), expense: Math.round(expense) });
-  }
-
-  // Category spending (current month)
-  const thisMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-  const catSpend = {};
-  transactions.filter(t => t.date && t.date.startsWith(thisMonth) && parseFloat(t.amount) < 0).forEach(t => {
-    const cat = t.category || 'Andet';
-    catSpend[cat] = (catSpend[cat] || 0) + Math.abs(parseFloat(t.amount));
-  });
-
-  // Account type spending
-  const acctSpend = {};
-  transactions.filter(t => parseFloat(t.amount) < 0).forEach(t => {
-    const type = t.accountType || 'andet';
-    acctSpend[ACCOUNT_TYPES[type] || type] = (acctSpend[ACCOUNT_TYPES[type] || type] || 0) + Math.abs(parseFloat(t.amount));
-  });
-
-  let ctx = `BRUGERENS FINANSIELLE DATA (WealthHealth):
-- Samlede aktiver: ${Math.round(totalAssets)} DKK
-- Samlet gæld: ${Math.round(totalLiabilities)} DKK
-- Net worth: ${Math.round(totalAssets - totalLiabilities)} DKK
-- SPV/Startup investeret: ${Math.round(totalSpvInvested)} DKK, nuværende værdi: ${Math.round(totalSpvCurrent)} DKK
-- Antal aktiver: ${assets.length}, gældsposter: ${liabilities.length}, transaktioner: ${transactions.length}
-- Antal selskaber: ${companies.length}, SPV-investeringer: ${spvs.length}
-
-AKTIVER:
-${assets.map(a => `  - ${a.name}: ${Math.round(a.value)} ${a.currency || 'DKK'} (${ASSET_CATEGORIES[a.category] || a.category})`).join('\n')}
-
-GÆLD:
-${liabilities.map(l => `  - ${l.name}: ${Math.round(l.amount)} ${l.currency || 'DKK'} (rente: ${l.rate || 0}%)`).join('\n')}
-
-SPV/STARTUPS:
-${spvs.map(s => `  - ${s.name}: investeret ${Math.round(s.invested)} ${s.currency || 'DKK'}, nu ${Math.round(s.currentValue)} ${s.currency || 'DKK'} (${s.status}, ejerandel: ${s.ownership || 0}%)`).join('\n')}
-
-MÅNEDLIGT FLOW (seneste 6 mdr):
-${months.map(m => `  - ${m.month}: indtægt ${m.income} DKK, udgift ${m.expense} DKK`).join('\n')}
-
-KATEGORIFORBRUG (denne måned):
-${Object.entries(catSpend).sort((a,b) => b[1] - a[1]).map(([k,v]) => `  - ${k}: ${Math.round(v)} DKK`).join('\n')}
-
-KONTOTYPE-FORBRUG:
-${Object.entries(acctSpend).sort((a,b) => b[1] - a[1]).map(([k,v]) => `  - ${k}: ${Math.round(v)} DKK`).join('\n')}
-`;
-  return ctx;
-}
-
-function sendAiPrompt() {
-  const input = document.getElementById('aiPrompt');
-  const prompt = input.value.trim();
-  if (!prompt || aiLoading) return;
-  input.value = '';
-  askAi(prompt);
-}
-
-async function askAi(prompt) {
-  if (aiLoading) return;
-  aiLoading = true;
-
-  aiMessages.push({ role: 'user', content: prompt });
-  renderAiMessages();
-
-  const context = gatherFinancialContext();
-  const systemPrompt = `Du er en erfaren dansk finansrådgiver og analytiker integreret i WealthHealth-platformen. Du analyserer brugerens komplette økonomi og giver konkrete, handlingsrettede anbefalinger på dansk. Vær specifik med tal og procenter. Brug bullets og korte afsnit. Brugeren hedder Mark.`;
-
-  try {
-    const res = await fetch(`${WORKER_URL}/proxy/ai/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'sonar',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: context + '\n\nBRUGERENS SPØRGSMÅL: ' + prompt }
-        ],
-        temperature: 0.3,
-        max_tokens: 1500,
-      })
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content || 'Kunne ikke generere svar.';
-      aiMessages.push({ role: 'assistant', content: reply });
-    } else {
-      // Fallback: local analysis if API fails
-      aiMessages.push({ role: 'assistant', content: generateLocalAnalysis(prompt) });
-    }
-  } catch (e) {
-    console.warn('AI API fejl:', e);
-    aiMessages.push({ role: 'assistant', content: generateLocalAnalysis(prompt) });
-  }
-
-  aiLoading = false;
-  renderAiMessages();
-}
-
-function generateLocalAnalysis(prompt) {
-  // Offline fallback — basic analysis from local data
-  const assets = loadData(STORAGE_KEYS.assets);
-  const liabilities = loadData(STORAGE_KEYS.liabilities);
-  const transactions = loadData(STORAGE_KEYS.transactions);
-  const spvs = loadData(STORAGE_KEYS.spv);
-
-  const totalAssets = assets.reduce((s, a) => s + (parseFloat(a.value) || 0), 0);
-  const totalLiabilities = liabilities.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
-  const totalSpv = spvs.reduce((s, x) => s + (parseFloat(x.currentValue) || 0), 0);
-  const netWorth = totalAssets + totalSpv - totalLiabilities;
-
-  const now = new Date();
-  const thisMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-  const monthlyExpense = transactions.filter(t => t.date && t.date.startsWith(thisMonth) && parseFloat(t.amount) < 0).reduce((s,t) => s + Math.abs(parseFloat(t.amount)), 0);
-  const monthlyIncome = transactions.filter(t => t.date && t.date.startsWith(thisMonth) && parseFloat(t.amount) >= 0).reduce((s,t) => s + parseFloat(t.amount), 0);
-
-  return `**Hurtig analyse (offline-tilstand)**
-
-Her er et overblik baseret på dine data:
-
-- **Net Worth**: ${fmtCurrency(netWorth)} (aktiver: ${fmtCurrency(totalAssets)}, gæld: ${fmtCurrency(totalLiabilities)}, SPV: ${fmtCurrency(totalSpv)})
-- **Denne måned**: Indtægt ${fmtCurrency(monthlyIncome)}, udgifter ${fmtCurrency(monthlyExpense)}
-- **Opsparingsrate**: ${monthlyIncome > 0 ? fmtPercent((monthlyIncome - monthlyExpense) / monthlyIncome * 100) : '—'}
-- **SPV-portefølje**: ${spvs.length} investeringer, samlet værdi ${fmtCurrency(totalSpv)}
-
-*For dybere analyse med AI-anbefalinger, tjek at du har internetforbindelse.*`;
-}
-
-function renderAiMessages() {
-  const container = document.getElementById('aiMessages');
+function renderWarrenMessages() {
+  const container = document.getElementById('warrenMessages');
   if (!container) return;
 
-  let html = aiMessages.map(m => {
+  let html = '';
+  if (warrenMessages.length === 0) {
+    html = '<div class="warren-msg system">Upload en årsopgørelse, skatteoplysninger eller regnskab — eller stil et spørgsmål om din økonomi.</div>';
+  }
+  
+  html += warrenMessages.map(m => {
     const cls = m.role === 'user' ? 'user' : 'assistant';
     let content = m.content;
-    // Simple markdown rendering
     if (m.role === 'assistant') {
+      // Markdown rendering
       content = content
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\n- /g, '<br>• ')
+        .replace(/### (.+)/g, '<h4>$1</h4>')
+        .replace(/## (.+)/g, '<h3>$1</h3>')
+        .replace(/^- (.+)/gm, '<li>$1</li>')
+        .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+        .replace(/<\/ul>\s*<ul>/g, '')
         .replace(/\n\n/g, '<br><br>')
         .replace(/\n/g, '<br>');
     }
-    return `<div class="ai-msg ${cls}">${content}</div>`;
+    return `<div class="warren-msg ${cls}">${content}</div>`;
   }).join('');
 
-  if (aiLoading) {
-    html += `<div class="ai-loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span>Analyserer dine data...</span></div>`;
+  if (warrenLoading) {
+    html += '<div class="warren-typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span>Warren analyserer...</span></div>';
   }
 
   container.innerHTML = html;
   container.scrollTop = container.scrollHeight;
 }
 
-function clearAiChat() {
-  aiMessages = [];
-  renderAiMessages();
+function renderWarrenDocs() {
+  const container = document.getElementById('warrenDocList');
+  const wrapper = document.getElementById('warrenDocs');
+  if (!container || !wrapper) return;
+  
+  if (warrenDocuments.length === 0) {
+    wrapper.style.display = 'none';
+    return;
+  }
+  wrapper.style.display = 'block';
+  container.innerHTML = warrenDocuments.map((d, i) => `
+    <div class="warren-doc-chip">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      ${esc(d.name)}
+      <span class="remove" onclick="removeWarrenDoc(${i})">×</span>
+    </div>
+  `).join('');
+}
+
+function removeWarrenDoc(index) {
+  warrenDocuments.splice(index, 1);
+  renderWarrenDocs();
+}
+
+async function handleWarrenFiles(fileList) {
+  const files = Array.from(fileList);
+  for (const file of files) {
+    try {
+      let content = '';
+      const ext = file.name.split('.').pop().toLowerCase();
+      
+      if (ext === 'pdf') {
+        content = await extractPdfText(file);
+      } else if (ext === 'xlsx' || ext === 'xls') {
+        content = await extractExcelText(file);
+      } else if (ext === 'csv') {
+        content = await file.text();
+      } else if (ext === 'txt') {
+        content = await file.text();
+      } else if (['png','jpg','jpeg'].includes(ext)) {
+        content = '[Billede uploadet: ' + file.name + ' \u2014 billedanalyse er ikke tilg\u00e6ngelig endnu]';
+      }
+      
+      // Truncate very long documents
+      if (content.length > 30000) {
+        content = content.substring(0, 30000) + '\n[... trunkeret \u2014 for langt dokument]';
+      }
+      
+      warrenDocuments.push({ name: file.name, content, type: ext });
+      
+      // Add system message
+      warrenMessages.push({ role: 'assistant', content: `Dokument **${file.name}** er uploadet og klar til analyse. Sp\u00f8rg mig om indholdet.` });
+    } catch (e) {
+      warrenMessages.push({ role: 'assistant', content: `Kunne ikke l\u00e6se ${file.name}: ${e.message}` });
+    }
+  }
+  
+  // Reset file input
+  document.getElementById('warrenFileInput').value = '';
+  renderWarrenPage();
+}
+
+async function extractPdfText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      try {
+        // Use PDF.js if available
+        if (typeof pdfjsLib !== 'undefined') {
+          const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(e.target.result) }).promise;
+          let text = '';
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            text += content.items.map(item => item.str).join(' ') + '\n';
+          }
+          resolve(text || '[PDF uden l\u00e6sbar tekst]');
+        } else {
+          resolve('[PDF uploadet \u2014 PDF.js indl\u00e6ses. Pr\u00f8v igen om et øjeblik.]');
+        }
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function extractExcelText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        let text = '';
+        wb.SheetNames.forEach(name => {
+          text += '=== Ark: ' + name + ' ===\n';
+          const sheet = wb.Sheets[name];
+          const csv = XLSX.utils.sheet_to_csv(sheet);
+          text += csv + '\n\n';
+        });
+        resolve(text);
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function sendWarren() {
+  const input = document.getElementById('warrenInput');
+  const question = input.value.trim();
+  if (!question || warrenLoading) return;
+  input.value = '';
+  askWarren(question);
+}
+
+async function askWarren(question) {
+  if (warrenLoading) return;
+  warrenLoading = true;
+
+  warrenMessages.push({ role: 'user', content: question });
+  
+  // Hide quick buttons
+  const quickBtns = document.getElementById('warrenQuickBtns');
+  if (quickBtns) quickBtns.style.display = 'none';
+  
+  renderWarrenMessages();
+
+  // Gather financial context
+  const context = gatherFinancialContext();
+  
+  // Gather document context
+  const docContext = warrenDocuments.map(d => `--- ${d.name} ---\n${d.content}`).join('\n\n');
+  
+  // Build conversation history for API
+  const history = warrenMessages.slice(0, -1).map(m => ({
+    role: m.role, content: m.content
+  }));
+
+  try {
+    const res = await fetch(`${WORKER_URL}/proxy/warren/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question,
+        history,
+        context,
+        documents: docContext || undefined,
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      warrenMessages.push({ role: 'assistant', content: data.answer || 'Ingen svar.' });
+    } else {
+      warrenMessages.push({ role: 'assistant', content: 'Forbindelsesfejl. Prøv igen.' });
+    }
+  } catch (e) {
+    warrenMessages.push({ role: 'assistant', content: 'Netværksfejl: ' + e.message });
+  }
+
+  warrenLoading = false;
+  renderWarrenMessages();
+}
+
+function clearWarren() {
+  warrenMessages = [];
+  warrenDocuments = [];
+  renderWarrenPage();
 }
 
 // ============ INIT ============
@@ -3225,6 +3305,11 @@ function updateCloudStatus() {
     el.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Kun lokal';
     el.style.color = 'var(--text-muted)';
   }
+}
+
+// PDF.js worker setup
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs';
 }
 
 document.addEventListener('DOMContentLoaded', init);
