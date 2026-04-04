@@ -1032,15 +1032,17 @@ const STORAGE_KEYS = {
   spv: 'wv_spv',
 };
 
-// Supabase table mapping (for cloud sync when tables exist)
+// Supabase table mapping — localStorage key → Supabase tabel
 const SUPABASE_TABLES = {
   wv_assets: 'wv_assets',
   wv_liabilities: 'wv_liabilities',
   wv_transactions: 'wv_transactions',
   wv_companies: 'wv_companies',
+  wv_company_financials: 'wv_company_financials',
   wv_snapshots: 'wv_snapshots',
   wv_watchlist: 'wv_watchlist',
   wv_spv: 'wv_spv',
+  wv_accounts: 'wv_accounts',
 };
 
 let supabaseReady = false;
@@ -1051,42 +1053,81 @@ async function checkSupabase() {
     const res = await fetch(`${WORKER_URL}/proxy/supabase/check`);
     const data = await res.json();
     supabaseReady = data.ready === true;
-    if (supabaseReady) console.log('☁️ Supabase cloud-sync aktiveret');
-    else console.log('📱 Kører med localStorage (Supabase tabeller ikke oprettet endnu)');
+    if (supabaseReady) {
+      console.log('☁️ Supabase cloud-sync aktiveret — henter data...');
+      await loadAllFromCloud();
+    } else {
+      console.log('📱 Kører med localStorage (Supabase tabeller ikke oprettet endnu)');
+    }
   } catch { supabaseReady = false; }
 }
 
+// Load all data from Supabase → localStorage cache
+async function loadAllFromCloud() {
+  const keys = Object.entries(SUPABASE_TABLES);
+  let cloudHasData = false;
+  
+  for (const [localKey, table] of keys) {
+    try {
+      const cloudData = await loadFromSupabase(localKey);
+      if (cloudData && cloudData.length > 0) {
+        // Cloud has data — use it as source of truth
+        localStorage.setItem(localKey, JSON.stringify(cloudData));
+        cloudHasData = true;
+        console.log(`  ☁️ ${table}: ${cloudData.length} rækker fra cloud`);
+      } else {
+        // Cloud is empty — check if we have localStorage data to migrate
+        const localData = loadData(localKey);
+        if (localData.length > 0) {
+          console.log(`  ⬆️ ${table}: migrerer ${localData.length} rækker til cloud`);
+          await cloudReplace(localKey, localData);
+        }
+      }
+    } catch (e) {
+      console.warn(`  ⚠️ ${table}: cloud-sync fejlede`, e);
+    }
+  }
+  
+  if (cloudHasData) {
+    // Re-render everything with cloud data
+    if (typeof renderDashboard === 'function') renderDashboard();
+    console.log('☁️ Alle data hentet fra cloud');
+  }
+}
+
 function loadData(key) {
+  // Synchronous localStorage read (cache) — cloud data loads async at init
   try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; }
 }
 
 function saveData(key, data) {
+  // Save to localStorage (instant) + Supabase (background)
   localStorage.setItem(key, JSON.stringify(data));
-  // Background sync to Supabase if available
   if (supabaseReady && SUPABASE_TABLES[key]) {
-    syncToSupabase(key, data).catch(e => console.warn('Supabase sync fejl:', e));
+    cloudReplace(key, data).catch(e => console.warn('Cloud sync fejl:', e));
   }
 }
 
-// Supabase cloud-sync via Worker proxy (no secrets in frontend)
-async function syncToSupabase(key, data) {
+// Replace all data for a table in Supabase (atomic delete + insert)
+async function cloudReplace(key, data) {
   const table = SUPABASE_TABLES[key];
-  if (!table || !data.length) return;
-  
+  if (!table) return;
   const rows = data.map(item => {
     const row = { ...item };
     delete row.editing;
     return row;
   });
-  
   try {
-    await fetch(`${WORKER_URL}/proxy/supabase/upsert`, {
+    await fetch(`${WORKER_URL}/proxy/supabase/replace`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ table, rows })
     });
-  } catch (e) { /* silently fail — localStorage is primary */ }
+  } catch (e) { console.warn('Cloud replace fejl:', e); }
 }
+
+// Legacy syncToSupabase — replaced by cloudReplace
+async function syncToSupabase(key, data) { return cloudReplace(key, data); }
 
 async function loadFromSupabase(key) {
   const table = SUPABASE_TABLES[key];
@@ -3172,6 +3213,18 @@ function init() {
   checkSupabase(); // Background check — non-blocking
   initAccountSelect();
   handleRoute();
+}
+
+function updateCloudStatus() {
+  const el = document.getElementById('cloudStatus');
+  if (!el) return;
+  if (supabaseReady) {
+    el.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg> Cloud-sync aktiv';
+    el.style.color = 'var(--success)';
+  } else {
+    el.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Kun lokal';
+    el.style.color = 'var(--text-muted)';
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);
